@@ -2,7 +2,7 @@
 Dependency-less Rest Library
 
 Simple GET request:
-```
+```java
 // Send request
 RequestEntity<String> request = new RequestEntity<>(HttpMethod.GET);
 ResponseEntity<String> response = request.exchange("http://localhost/testAPI", String.class);
@@ -10,7 +10,7 @@ System.out.println(response.getBody());
 ```
 
 Simple GET request (async):
-```
+```java
 RequestEntity<JsonObject> request = new RequestEntity<>(HttpMethod.GET);
 request.exchangeAsync("http://localhost/testJson", JsonObject.class, (response)->{
 	System.out.println(response.getBody());
@@ -18,7 +18,7 @@ request.exchangeAsync("http://localhost/testJson", JsonObject.class, (response)-
 ```
 
 Simple Rest Server:
-```
+```java
 public class TestServer extends RestServer {
 	public TestServer() {
 		
