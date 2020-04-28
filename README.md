@@ -1,5 +1,5 @@
 # JRest
-Dependency-less Rest Library
+Dependency-less Rest Library. Very barebones.
 
 Simple GET request:
 ```java
