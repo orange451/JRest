@@ -2,17 +2,14 @@ package jrest;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -23,7 +20,6 @@ import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
@@ -189,39 +185,10 @@ public abstract class RestServer {
 	}
 	
     protected static <T> HttpResponse<T> readResponse(HttpURLConnection connection, T type) throws IOException {
+    	// Read body
     	String body = new String(readAll(connection.getInputStream()), Charset.forName("UTF-8"));
-    	// Parse input into strings
-		/*List<String> headerData = readTest(inputStream);
-		if ( headerData == null || headerData.size() == 0 ) {
-			return new HttpResponse<T>(HttpStatus.REQUEST_TIMEOUT);
-		}
-		
-		for (String string:headerData)
-			System.out.println(string);*/
-		
-		//String body = headerData.remove(headerData.size()-1);
-		
-		// Must have 2 strings
-		//if ( headerData.size() < 2 )
-			//return null;
-		
-		// Get some header info
-		/*String[] t1 = headerData.get(0).split(" ");
-		HttpStatus status = HttpStatus.valueOf(Integer.parseInt(t1[1]));
-		
-		// Create headers
-		HttpHeaders headers = new HttpHeaders();
-		for (String string : headerData) {
-			String[] split = string.split(":", 2);
-			if ( split.length != 2 )
-				continue;
-			String key = split[0].trim();
-			String value = split[1].trim();
-			
-			headers.put(key, value);
-		}*/
     	
-    	// Create headers
+    	// Create response headers
     	HttpHeaders headers = new HttpHeaders();
     	Map<String, List<String>> map = connection.getHeaderFields();
     	for (Map.Entry<String, List<String>> entry : map.entrySet()) {
