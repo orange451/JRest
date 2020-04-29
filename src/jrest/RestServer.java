@@ -5,7 +5,6 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -19,23 +18,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
-
 public abstract class RestServer {
 	private static ServerSocket server;	
 	
-	private final static Gson gson;
-
+	@SuppressWarnings("rawtypes")
 	private final Map<String, Map<HttpMethod, EndPointWrapper>> endpointMap = new HashMap<>();
-	
-	static {
-		gson = new GsonBuilder().serializeNulls().create();
-	}
 	
 	public RestServer() {
 		
@@ -46,6 +33,7 @@ public abstract class RestServer {
 				System.out.println("Server started on: " + server.getLocalPort());
 				while(true) {
 
+					// Dont burn CPU while waiting for connections
 					try {
 						Thread.sleep(5);
 						Thread.yield();
@@ -53,34 +41,40 @@ public abstract class RestServer {
 						e.printStackTrace();
 					}
 
-					final Socket incoming;
 					try {
-						incoming = server.accept();
+						// Wait for socket
+						Socket incoming = server.accept();
 
-						new Thread(new Runnable() {
-							public void run() {
-								try {
-									while(true) {
-										if ( incoming.isClosed() )
-											break;
-
-										// Parse
-										HttpRequest<?> request = parseRequest(incoming.getInetAddress().getHostAddress(), incoming.getPort(), incoming.getInputStream());
-										if ( request == null )
-											continue;
-										
-										// Handle request logic
-										onRequest(incoming, request);
-
-							        	// Dont burn CPU
-										Thread.sleep(1);
-										incoming.close();
+						// Start listening to it
+						if ( incoming != null ) {
+							new Thread(new Runnable() {
+								public void run() {
+									try {
+										while(true) {
+											// If it's closed, we cant continue
+											if ( incoming.isClosed() )
+												break;
+	
+											// Parse sockets request
+											HttpRequest<?> request = parseRequest(incoming.getInetAddress().getHostAddress(), incoming.getPort(), incoming.getInputStream());
+											if ( request == null )
+												continue;
+											
+											// Run REST endpoint logic
+											onRequest(incoming, request);
+	
+								        	// Dont burn CPU
+											Thread.sleep(1);
+											
+											// Close socket when done
+											incoming.close();
+										}
+									} catch(Exception e) {
+										e.printStackTrace();
 									}
-								} catch(Exception e) {
-									e.printStackTrace();
 								}
-							}
-						}).start();
+							}).start();
+						}
 					} catch(SocketTimeoutException e) {
 						e.printStackTrace();
 					} catch (IOException e) {
@@ -119,10 +113,10 @@ public abstract class RestServer {
 			
 			// Convert body
 			String writeBody = null;
-			if ( body instanceof JsonElement ) {
-				writeBody = gson.toJson(body);
-			} else {
+			if ( body instanceof String ) {
 				writeBody = body.toString();
+			} else {
+				writeBody = RestUtil.gson.toJson(body);
 			}
 			
 			// Write response
@@ -138,49 +132,11 @@ public abstract class RestServer {
 			b.close();
 		}
 	}
-
-	public abstract int getPort();
-	
-	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, T bodyType, EndPoint<T> object) {
-		if ( !endpointMap.containsKey(endpoint) )
-			endpointMap.put(endpoint, new HashMap<>());
-		
-		Map<HttpMethod, EndPointWrapper> t = endpointMap.get(endpoint);
-		if ( t == null )
-			return;
-		
-		t.put(method, new EndPointWrapper<T>(object, consumes, produces, bodyType));
-		System.out.println("Registered endpoint: " + endpoint + " with method: " + method);
-	}
-	
-	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<T> bodyType, EndPoint object) {
-		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, bodyType, object);
-	}
-	
-	public <T> void addEndpoint(HttpMethod method, String endpoint, Class<T> bodyType, EndPoint<T> object) {
-		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, bodyType, object);
-	}
-	
-	public void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, EndPoint object) {
-		addEndpoint(method, endpoint, consumes, produces, Object.class, object);
-	}
-	
-	public void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, EndPoint object) {
-		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, object);
-	}
-	
-	public void addEndpoint(HttpMethod method, String endpoint, EndPoint object) {
-		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, object);
-	}
-	
-	public void addEndpoint(String endpoint, EndPoint object) {
-		addEndpoint(HttpMethod.GET, endpoint, object);
-	}
 	
     protected <T> HttpRequest<?> parseRequest(String address, int port, InputStream inputStream) throws IOException {
     	
     	// Parse input into strings
-		List<String> headerData = readTest(inputStream);
+		List<String> headerData = readRequestData(inputStream);
 		if ( headerData == null || headerData.size() == 0 )
 			return null;
 		Object body = headerData.remove(headerData.size()-1);
@@ -223,7 +179,7 @@ public abstract class RestServer {
 		URI uri = URI.create("http://" +host + ":" + port + api);
 		EndPointWrapper<?> endpoint = getEndPoint(uri.getPath(), method);
 		if ( endpoint != null )
-			body = getGenericObject(body.toString(), endpoint.getBodyType());
+			body = RestUtil.convertObject(body.toString(), endpoint.getBodyType());
 		HttpRequest<?> request = new HttpRequest<>(method, headers, body);
 		request.uri = uri;
 		request.urlParams = params;
@@ -234,7 +190,7 @@ public abstract class RestServer {
 	
     protected static <T> HttpResponse<T> readResponse(HttpURLConnection connection, T type) throws IOException {
     	// Read body
-    	byte[] data = readAll(connection.getInputStream());
+    	byte[] data = RestUtil.readAll(connection.getInputStream());
     	String body = new String(data, Charset.forName("UTF-8"));
     	
     	// Create response headers
@@ -245,31 +201,52 @@ public abstract class RestServer {
     	}
 		
 		// Create response object
-		T tBody = getGenericObject(body, type);
+		T tBody = RestUtil.convertObject(body, type);
 		HttpResponse<T> request = new HttpResponse<>(HttpStatus.valueOf(connection.getResponseCode()), headers, tBody);
 		
 		// Return
 		return request;
 	}
 
-    private static byte[] readAll(InputStream inputStream) throws IOException {
-		long TIMEOUT = System.currentTimeMillis()+2000;
+	public abstract int getPort();
+	
+	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, T bodyType, EndPoint<T> object) {
+		if ( !endpointMap.containsKey(endpoint) )
+			endpointMap.put(endpoint, new HashMap<>());
 		
-		// Wait until ready
-		BufferedInputStream bufferedInput = new BufferedInputStream(inputStream);
-		while(bufferedInput.available() == 0) {
-			if ( System.currentTimeMillis() > TIMEOUT ) {
-				return null;
-			}
-		}
+		Map<HttpMethod, EndPointWrapper> t = endpointMap.get(endpoint);
+		if ( t == null )
+			return;
 		
-		// Ready until empty
-		byte[] data = new byte[bufferedInput.available()];
-		bufferedInput.read(data);
-		return data;
-    }
+		t.put(method, new EndPointWrapper<T>(object, consumes, produces, bodyType));
+		System.out.println("Registered endpoint: " + endpoint + " with method: " + method);
+	}
+	
+	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<T> bodyType, EndPoint object) {
+		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, bodyType, object);
+	}
+	
+	public <T> void addEndpoint(HttpMethod method, String endpoint, Class<T> bodyType, EndPoint<T> object) {
+		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, bodyType, object);
+	}
+	
+	public void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, EndPoint object) {
+		addEndpoint(method, endpoint, consumes, produces, Object.class, object);
+	}
+	
+	public void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, EndPoint object) {
+		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, object);
+	}
+	
+	public void addEndpoint(HttpMethod method, String endpoint, EndPoint object) {
+		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, object);
+	}
+	
+	public void addEndpoint(String endpoint, EndPoint object) {
+		addEndpoint(HttpMethod.GET, endpoint, object);
+	}
     
-    private static List<String> readTest(InputStream inputStream) throws IOException {
+    private static List<String> readRequestData(InputStream inputStream) throws IOException {
 		long TIMEOUT = System.currentTimeMillis()+1000;
 		
 		BufferedInputStream bufferedInput = new BufferedInputStream(inputStream);
@@ -313,50 +290,5 @@ public abstract class RestServer {
 			return null;
 		
 		return map.get(method);
-	}
-
-	@SuppressWarnings("unchecked")
-	protected static <T> T getGenericObject(String body, T type) {
-		if ( body == null || body.length() == 0 )
-			return (T)null;
-
-		Class<?> c = (Class<?>)type;
-		
-		// Convert to gson tree
-		if ( JsonObject.class.isAssignableFrom(c) ) {
-			Type empMapType = new TypeToken<Map<String, Object>>() {}.getType();
-			return (T) gson.toJsonTree(gson.fromJson(body, empMapType)).getAsJsonObject();
-		}
-		
-		// json array
-		if ( JsonArray.class.isAssignableFrom(c) ) {
-			Type empMapType = new TypeToken<List<Object>>() {}.getType();
-			Object obj = gson.fromJson(body, empMapType);
-			return (T) gson.toJsonTree(obj).getAsJsonArray();
-		}
-		
-		// Convert to map
-		if ( Map.class.isAssignableFrom(c) ) {
-			Type empMapType = new TypeToken<Map<String, Object>>() {}.getType();
-			return gson.fromJson(body, empMapType);
-		}
-		
-		// Convert to list
-		if ( List.class.isAssignableFrom(c) ) {
-			Type empMapType = new TypeToken<List<Object>>() {}.getType();
-			return gson.fromJson(body, empMapType);
-		}
-		
-		// Convert to String
-		if ( String.class.isAssignableFrom(c) ) {
-			return (T) body.toString();
-		}
-		
-		// Try to parse DTO as fallback
-		try {
-			return (T) gson.fromJson(body, c);
-		} catch(Exception e) {
-			return null;
-		}
 	}
 }
