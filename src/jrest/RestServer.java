@@ -24,13 +24,12 @@ public abstract class RestServer {
 	@SuppressWarnings("rawtypes")
 	private final Map<String, Map<HttpMethod, EndPointWrapper>> endpointMap = new HashMap<>();
 	
-	public RestServer() {
-		
+	public RestServer() {		
 		new Thread(()-> {
 			try {
 				server = new ServerSocket(getPort());
 				server.setSoTimeout(0);
-				System.out.println("Server started on: " + server.getLocalPort());
+				System.out.println("REST Server started: " + server.getInetAddress().getHostName()+":"+server.getLocalPort());
 				while(true) {
 
 					// Dont burn CPU while waiting for connections
@@ -92,6 +91,15 @@ public abstract class RestServer {
 				}
 			}
 		}).start();
+		
+		// Wait for server to turn on
+		while(server == null ) {
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	@SuppressWarnings("unchecked")
