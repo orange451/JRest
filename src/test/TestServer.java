@@ -8,6 +8,14 @@ import jrest.ResponseEntity;
 import jrest.RestServer;
 
 public class TestServer extends RestServer {
+	
+	String[] names = {
+			"Frank",
+			"Jeff",
+			"Oliver",
+			"Maxwell"
+	};
+	
 	public TestServer() {
 		
 		/**
@@ -24,18 +32,20 @@ public class TestServer extends RestServer {
 			JsonObject payload = request.getBody();
 			int id = payload.get("id").getAsInt();
 			
-			String[] names = {
-					"Frank",
-					"Jeff",
-					"Oliver",
-					"Maxwell"
-			};
-			
 			JsonObject response = new JsonObject();
 			response.addProperty("id", id);
 			response.addProperty("name", names[id-1]);
 			
 			return new ResponseEntity<JsonObject>(HttpStatus.OK, response);
+		});
+		
+		/**
+		 * Test Post endpoint. Returns your posted data back to you.
+		 */
+		this.addEndpoint(HttpMethod.GET, "/GetUsername", (request)->{
+			int id = Integer.parseInt(request.getUrlParameters().get("id").toString());
+			String name = names[id-1];
+			return new ResponseEntity<String>(HttpStatus.OK, name);
 		});
 		
 		/**

@@ -33,6 +33,8 @@ class EndPointWrapper<T> {
 		try {
 			String bodyString = request.getBody()==null?new String():request.getBody().toString();
 			HttpRequest<T> useRequest = new HttpRequest<T>(request.getMethod(), request.getHeaders(), RestServer.getGenericObject(bodyString, getBodyType()));
+			useRequest.uri = request.getURI();
+			useRequest.urlParams = request.getUrlParameters();
 			return getEndpoint().run(useRequest);
 		} catch (Exception e) {
 			e.printStackTrace();

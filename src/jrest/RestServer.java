@@ -191,7 +191,19 @@ public abstract class RestServer {
 		// Get some header info
 		String[] t1 = headerData.get(0).split(" ");
 		HttpMethod method = HttpMethod.valueOf(t1[0]);
-		String api = t1[1];
+		String apiString = t1[1];
+		String[] apisplit = apiString.split("\\?", 2);
+		String api = apisplit[0];
+		Map<String, String> params = new HashMap<>();
+		if ( apisplit.length > 1 ) {
+			String[] paramsplit = apisplit[1].split("&");
+			for (String paramStr: paramsplit) {
+				String[] t = paramStr.split("=", 2);
+				if ( t.length == 2 ) {
+					params.put(t[0], t[1]);
+				}
+			}
+		}
 		
 		// Create headers
 		HttpHeaders headers = new HttpHeaders();
@@ -213,6 +225,7 @@ public abstract class RestServer {
 			body = getGenericObject(body.toString(), endpoint.getBodyType());
 		HttpRequest<?> request = new HttpRequest<>(method, headers, body);
 		request.uri = uri;
+		request.urlParams = params;
 		
 		// Return
 		return request;
@@ -339,6 +352,10 @@ public abstract class RestServer {
 		}
 		
 		// Try to parse DTO as fallback
-		return (T) gson.fromJson(body, c);
+		try {
+			return (T) gson.fromJson(body, c);
+		} catch(Exception e) {
+			return null;
+		}
 	}
 }
