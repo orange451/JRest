@@ -152,11 +152,11 @@ public abstract class RestServer {
 		System.out.println("Registered endpoint: " + endpoint + " with method: " + method);
 	}
 	
-	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, T bodyType, EndPoint object) {
+	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<T> bodyType, EndPoint object) {
 		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, bodyType, object);
 	}
 	
-	public <T> void addEndpoint(HttpMethod method, String endpoint, T bodyType, EndPoint object) {
+	public <T> void addEndpoint(HttpMethod method, String endpoint, Class<T> bodyType, EndPoint<T> object) {
 		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, bodyType, object);
 	}
 	

@@ -28,7 +28,10 @@ public class TestClient {
 		body.addProperty("id", 1);
 		RequestEntity<JsonObject> request3 = new RequestEntity<>(HttpMethod.POST, body);
 		request3.exchangeAsync("http://localhost/GetEmployee", JsonObject.class, (response)->{
-			System.out.println(response.getBody());
+			JsonObject payload = response.getBody();
+			System.out.println("Employee data: ");
+			System.out.println("\tid: " + payload.get("id").getAsInt());
+			System.out.println("\tname: " + payload.get("name"));
 		});
 
 		// Test website endpoint
