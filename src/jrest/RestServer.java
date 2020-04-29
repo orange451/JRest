@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.Inet4Address;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -24,12 +25,16 @@ public abstract class RestServer {
 	@SuppressWarnings("rawtypes")
 	private final Map<String, Map<HttpMethod, EndPointWrapper>> endpointMap = new HashMap<>();
 	
+	private boolean started;
+	private boolean error;
+	
 	public RestServer() {		
 		new Thread(()-> {
 			try {
 				server = new ServerSocket(getPort());
 				server.setSoTimeout(0);
-				System.out.println("REST Server started: " + server.getInetAddress().getHostName()+":"+server.getLocalPort());
+				System.out.println("REST Server started: " + Inet4Address.getLocalHost().getHostAddress()+":"+server.getLocalPort());
+				started = true;
 				while(true) {
 
 					// Dont burn CPU while waiting for connections
@@ -83,17 +88,19 @@ public abstract class RestServer {
 			} catch (IOException e1) {
 				System.out.println("Error making server... " + e1);
 				e1.printStackTrace();
+				error = true;
 			} finally {
 				try {
 					server.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+				started = false;
 			}
 		}).start();
 		
 		// Wait for server to turn on
-		while(server == null ) {
+		while(!started && !error) {
 			try {
 				Thread.sleep(1);
 			} catch (InterruptedException e) {
@@ -217,6 +224,20 @@ public abstract class RestServer {
 	}
 
 	public abstract int getPort();
+	
+	/**
+	 * Returns whether the rest server has finished initializing.
+	 */
+	public boolean isStarted() {
+		return this.started;
+	}
+	
+	/**
+	 * Returns whether the rest server encountered an error preventing it from running.
+	 */
+	public boolean isErrored() {
+		return this.error;
+	}
 	
 	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, T bodyType, EndPoint<T> object) {
 		if ( !endpointMap.containsKey(endpoint) )
