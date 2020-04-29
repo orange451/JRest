@@ -26,9 +26,14 @@ public abstract class RestServer {
 	private final Map<String, Map<HttpMethod, EndPointWrapper>> endpointMap = new HashMap<>();
 
 	private boolean started;
+	
 	private boolean error;
+	
+	private String serverName;
 
 	public RestServer() {
+		this.serverName = "A good one";
+		
 		new Thread(() -> {
 			try {
 				server = new ServerSocket(getPort());
@@ -141,11 +146,9 @@ public abstract class RestServer {
 
 			// Write response
 			BufferedOutputStream b = new BufferedOutputStream(socket.getOutputStream());
-			b.write(new String(
-					"HTTP/1.1 " + response.getStatus().value() + " " + response.getStatus().getReasonPhrase() + "\n")
-							.getBytes("UTF-8"));
+			b.write(new String("HTTP/1.1 " + response.getStatus().value() + " " + response.getStatus().getReasonPhrase() + "\n").getBytes("UTF-8"));
 			b.write(new String("Keep-Alive: " + "timeout=5, max=99" + "\n").getBytes("UTF-8"));
-			b.write(new String("Server: " + "A good one" + "\n").getBytes("UTF-8"));
+			b.write(new String("Server: " + this.getServerName() + "\n").getBytes("UTF-8"));
 			b.write(new String("Connection: " + "Keep-Alive" + "\n").getBytes("UTF-8"));
 			b.write(new String("Content-Length: " + writeBody.length() + "\n").getBytes("UTF-8"));
 			b.write(new String("Content-Type: " + endpoint.getProduces() + "\n\n").getBytes("UTF-8"));
@@ -291,6 +294,20 @@ public abstract class RestServer {
 	 */
 	public boolean isErrored() {
 		return this.error;
+	}
+
+	/**
+	 * Gets the name of the server used in HTTP responses
+	 */
+	public void setServerName(String name) {
+		this.serverName = name;
+	}
+	
+	/**
+	 * Sets the name of the server used in HTTP responses
+	 */
+	public String getServerName() {
+		return this.serverName;
 	}
 
 	/**
