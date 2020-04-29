@@ -331,7 +331,7 @@ public abstract class RestServer {
 			return;
 
 		t.put(method, new EndPointWrapper<T>(object, consumes, produces, bodyType));
-		System.out.println("Registered endpoint: " + endpoint + " with method: " + method);
+		System.out.println("Registered endpoint\t[" + method + "]\t " + endpoint);
 	}
 
 	/**
