@@ -42,12 +42,13 @@ public abstract class RestServer {
 		new Thread(()-> {
 			try {
 				server = new ServerSocket(getPort());
-				server.setSoTimeout(1000);
+				server.setSoTimeout(0);
 				System.out.println("Server started on: " + server.getLocalPort());
 				while(true) {
 
 					try {
-						Thread.sleep(50);
+						Thread.sleep(5);
+						Thread.yield();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
@@ -55,7 +56,6 @@ public abstract class RestServer {
 					final Socket incoming;
 					try {
 						incoming = server.accept();
-						incoming.setKeepAlive(true);
 
 						new Thread(new Runnable() {
 							public void run() {
@@ -74,6 +74,7 @@ public abstract class RestServer {
 
 							        	// Dont burn CPU
 										Thread.sleep(1);
+										incoming.close();
 									}
 								} catch(Exception e) {
 									e.printStackTrace();
@@ -81,7 +82,7 @@ public abstract class RestServer {
 							}
 						}).start();
 					} catch(SocketTimeoutException e) {
-						// No log
+						e.printStackTrace();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
