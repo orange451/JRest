@@ -21,16 +21,16 @@ public class TestServer extends RestServer {
 		/**
 		 * Test Endpoint. Returns static String
 		 */
-		this.addEndpoint(HttpMethod.GET, "/", (request)->{
-			return new ResponseEntity<String>(HttpStatus.OK, "Index");
+		this.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{
+			return new ResponseEntity<String>(HttpStatus.OK, "<h1>Index! Welcome to JREST!</h1>");
 		});
 
 		
 		/**
 		 * Test Endpoint. Returns static String
 		 */
-		this.addEndpoint(HttpMethod.GET, "/testAPI", MediaType.TEXT_HTML, (request)->{
-			return new ResponseEntity<String>(HttpStatus.OK, "<h1>Hello From Server!</h1>");
+		this.addEndpoint(HttpMethod.GET, "/testAPI", (request)->{
+			return new ResponseEntity<String>(HttpStatus.OK, "Hello From Server!");
 		});
 		
 		/**
