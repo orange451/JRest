@@ -11,6 +11,9 @@ public class MediaType {
 	public static final String TEXT_PLAIN_VALUE = "text/plain";
 	public static final MediaType TEXT_PLAIN = new MediaType(TEXT_PLAIN_VALUE);
 	
+	public static final String TEXT_HTML_VALUE = "text/html";
+	public static final MediaType TEXT_HTML = new MediaType(TEXT_HTML_VALUE);
+	
 	private String type;
 	
 	MediaType(String type) {

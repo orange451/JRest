@@ -32,7 +32,7 @@ public abstract class RestServer {
 	private String serverName;
 
 	public RestServer() {
-		this.serverName = "A good one";
+		this.serverName = "JRest : Lightweight REST Server";
 		
 		new Thread(() -> {
 			try {

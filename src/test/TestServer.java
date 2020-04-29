@@ -29,8 +29,8 @@ public class TestServer extends RestServer {
 		/**
 		 * Test Endpoint. Returns static String
 		 */
-		this.addEndpoint(HttpMethod.GET, "/testAPI", (request)->{
-			return new ResponseEntity<String>(HttpStatus.OK, "Hello From Server!");
+		this.addEndpoint(HttpMethod.GET, "/testAPI", MediaType.TEXT_HTML, (request)->{
+			return new ResponseEntity<String>(HttpStatus.OK, "<h1>Hello From Server!</h1>");
 		});
 		
 		/**
