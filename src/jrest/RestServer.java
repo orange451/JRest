@@ -333,7 +333,12 @@ public abstract class RestServer {
 			return gson.fromJson(body, empMapType);
 		}
 		
-		// Fallback is string
-		return (T) body.toString();
+		// Convert to String
+		if ( String.class.isAssignableFrom(c) ) {
+			return (T) body.toString();
+		}
+		
+		// Try to parse DTO as fallback
+		return (T) gson.fromJson(body, c);
 	}
 }

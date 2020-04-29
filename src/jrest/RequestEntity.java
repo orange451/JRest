@@ -36,11 +36,11 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		return this.method;
 	}
 	
-	public void exchangeAsync(String url, Class<T> type, AsyncResponse<T> response) throws MalformedURLException {
+	public <P, Q> void exchangeAsync(String url, Class<Q> type, AsyncResponse<Q> response) throws MalformedURLException {
 		this.exchangeAsync(new URL(url), type, response);
 	}
 	
-	public void exchangeAsync(URL url, Class<T> type, AsyncResponse<T> response) {
+	public <P, Q> void exchangeAsync(URL url, Class<Q> type, AsyncResponse<Q> response) {
 		new Thread(()->{
 			try {
 				response.response(exchange(url, type));
@@ -54,7 +54,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		return this.exchange(new URL(url), type);
 	}
 	
-	public ResponseEntity<T> exchange(URL url, Class<T> type) throws IOException {
+	public <P, Q> ResponseEntity<Q> exchange(URL url, Class<Q> type) throws IOException {
 		// Connect to endpoint
 		try {
 			
@@ -90,17 +90,17 @@ public class RequestEntity<T> extends HttpEntity<T> {
 
         	// Get response
         	@SuppressWarnings("unchecked")
-			HttpResponse<T> response = (HttpResponse<T>) RestServer.readResponse(con, type);
+			HttpResponse<Q> response = (HttpResponse<Q>) RestServer.readResponse(con, type);
         	con.getInputStream().close();
         	if ( response == null ) {
-        		return new ResponseEntity<T>(HttpStatus.NOT_FOUND);
+        		return new ResponseEntity<Q>(HttpStatus.NOT_FOUND);
         	} else {
-        		return new ResponseEntity<T>(response.getStatus(), response.getHeaders(), response.getBody());
+        		return new ResponseEntity<Q>(response.getStatus(), response.getHeaders(), response.getBody());
         	}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		return new ResponseEntity<T>(HttpStatus.BAD_REQUEST);
+		return new ResponseEntity<Q>(HttpStatus.BAD_REQUEST);
 	}
 }

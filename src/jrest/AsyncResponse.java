@@ -1,6 +1,6 @@
 package jrest;
 
 @FunctionalInterface
-public interface AsyncResponse<T> {
-	public void response(ResponseEntity<T> response);
+public interface AsyncResponse<Q> {
+	public void response(ResponseEntity<Q> response);
 }
