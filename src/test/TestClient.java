@@ -25,9 +25,9 @@ public class TestClient {
 		
 		// Test POST JSON
 		JsonObject body = new JsonObject();
-		body.addProperty("TestKey", "The server will send this back to us!");
+		body.addProperty("id", 1);
 		RequestEntity<JsonObject> request3 = new RequestEntity<>(HttpMethod.POST, body);
-		request3.exchangeAsync("http://localhost/testPost", JsonObject.class, (response)->{
+		request3.exchangeAsync("http://localhost/GetEmployee", JsonObject.class, (response)->{
 			System.out.println(response.getBody());
 		});
 

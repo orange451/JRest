@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
@@ -19,16 +20,25 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 public abstract class RestServer {
-	private static ServerSocket server;
+	private static ServerSocket server;	
+	
+	private final static Gson gson;
 
-	private Map<String, Map<HttpMethod, EndPointWrapper>> endpointMap = new HashMap<>();
+	private final Map<String, Map<HttpMethod, EndPointWrapper>> endpointMap = new HashMap<>();
+	
+	static {
+		gson = new GsonBuilder().serializeNulls().create();
+	}
 	
 	public RestServer() {
+		
 		new Thread(()-> {
 			try {
 				server = new ServerSocket(getPort());
@@ -55,42 +65,12 @@ public abstract class RestServer {
 											break;
 
 										// Parse
-										HttpRequest<String> request = parseRequest(incoming.getInetAddress().getHostAddress(), incoming.getPort(), incoming.getInputStream());
+										HttpRequest<?> request = parseRequest(incoming.getInetAddress().getHostAddress(), incoming.getPort(), incoming.getInputStream());
 										if ( request == null )
 											continue;
 										
-										// Log
-										if ( request != null )
-											System.out.println("["+new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
-										
-										// Get matching endpoint
-										EndPointWrapper endpoint = getEndPoint(request.getURI().getPath(), request.getMethod());
-										if ( endpoint != null ) {
-											ResponseEntity<?> response = null;
-											try {
-												response = endpoint.getEndpoint().run(request);
-											} catch (Exception e) {
-												e.printStackTrace();
-											}
-											if ( response == null )
-												response = new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-											
-											Object body = response.getBody();
-											if ( body == null )
-												body = new String();
-											
-											// Write response
-											BufferedOutputStream b = new BufferedOutputStream(incoming.getOutputStream());
-											b.write(new String("HTTP/1.1 "+response.getStatus().value()+" "+response.getStatus().getReasonPhrase()+"\n").getBytes("UTF-8"));
-											b.write(new String("Keep-Alive: " + "timeout=5, max=99" + "\n").getBytes("UTF-8"));
-											b.write(new String("Server: " + "A good one" + "\n").getBytes("UTF-8"));
-											b.write(new String("Connection: " + "Keep-Alive" + "\n").getBytes("UTF-8"));
-											b.write(new String("Content-Length: "+body.toString().length()+"\n").getBytes("UTF-8"));
-											b.write(new String("Content-Type: "+endpoint.getProduces()+"\n\n").getBytes("UTF-8"));
-											b.write(new String(body.toString()).getBytes("UTF-8"));
-											b.flush();
-											b.close();
-										}
+										// Handle request logic
+										onRequest(incoming, request);
 
 							        	// Dont burn CPU
 										Thread.sleep(1);
@@ -119,9 +99,48 @@ public abstract class RestServer {
 		}).start();
 	}
 	
+	@SuppressWarnings("unchecked")
+	protected <T> void onRequest(Socket socket, HttpRequest<?> request) throws UnsupportedEncodingException, IOException {
+		// Log
+		if ( request != null )
+			System.out.println("["+new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
+		
+		// Get matching endpoint
+		EndPointWrapper<T> endpoint = getEndPoint(request.getURI().getPath(), request.getMethod());
+		if ( endpoint != null ) {
+			ResponseEntity<T> response = endpoint.query((HttpRequest<T>) request);
+			if ( response == null )
+				response = new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+			
+			Object body = response.getBody();
+			if ( body == null )
+				body = new String();
+			
+			// Convert body
+			String writeBody = null;
+			if ( body instanceof JsonElement ) {
+				writeBody = gson.toJson(body);
+			} else {
+				writeBody = body.toString();
+			}
+			
+			// Write response
+			BufferedOutputStream b = new BufferedOutputStream(socket.getOutputStream());
+			b.write(new String("HTTP/1.1 "+response.getStatus().value()+" "+response.getStatus().getReasonPhrase()+"\n").getBytes("UTF-8"));
+			b.write(new String("Keep-Alive: " + "timeout=5, max=99" + "\n").getBytes("UTF-8"));
+			b.write(new String("Server: " + "A good one" + "\n").getBytes("UTF-8"));
+			b.write(new String("Connection: " + "Keep-Alive" + "\n").getBytes("UTF-8"));
+			b.write(new String("Content-Length: "+writeBody.length()+"\n").getBytes("UTF-8"));
+			b.write(new String("Content-Type: "+endpoint.getProduces()+"\n\n").getBytes("UTF-8"));
+			b.write(new String(writeBody).getBytes("UTF-8"));
+			b.flush();
+			b.close();
+		}
+	}
+
 	public abstract int getPort();
 	
-	public void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, EndPoint object) {
+	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, T bodyType, EndPoint<T> object) {
 		if ( !endpointMap.containsKey(endpoint) )
 			endpointMap.put(endpoint, new HashMap<>());
 		
@@ -129,8 +148,20 @@ public abstract class RestServer {
 		if ( t == null )
 			return;
 		
-		t.put(method, new EndPointWrapper(object, consumes, produces));
+		t.put(method, new EndPointWrapper<T>(object, consumes, produces, bodyType));
 		System.out.println("Registered endpoint: " + endpoint + " with method: " + method);
+	}
+	
+	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, T bodyType, EndPoint object) {
+		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, bodyType, object);
+	}
+	
+	public <T> void addEndpoint(HttpMethod method, String endpoint, T bodyType, EndPoint object) {
+		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, bodyType, object);
+	}
+	
+	public void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, EndPoint object) {
+		addEndpoint(method, endpoint, consumes, produces, Object.class, object);
 	}
 	
 	public void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, EndPoint object) {
@@ -138,20 +169,20 @@ public abstract class RestServer {
 	}
 	
 	public void addEndpoint(HttpMethod method, String endpoint, EndPoint object) {
-		addEndpoint(method, endpoint, MediaType.ALL, object);
+		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, object);
 	}
 	
 	public void addEndpoint(String endpoint, EndPoint object) {
 		addEndpoint(HttpMethod.GET, endpoint, object);
 	}
 	
-    protected static HttpRequest<String> parseRequest(String address, int port, InputStream inputStream) throws IOException {
+    protected <T> HttpRequest<?> parseRequest(String address, int port, InputStream inputStream) throws IOException {
     	
     	// Parse input into strings
 		List<String> headerData = readTest(inputStream);
 		if ( headerData == null || headerData.size() == 0 )
 			return null;
-		String body = headerData.remove(headerData.size()-1);
+		Object body = headerData.remove(headerData.size()-1);
 		
 		// Must have 2 strings
 		if ( headerData.size() < 2 )
@@ -177,7 +208,10 @@ public abstract class RestServer {
 		// Create request object
 		String host = address.replace("0:0:0:0:0:0:0:1", "127.0.0.1");
 		URI uri = URI.create("http://" +host + ":" + port + api);
-		HttpRequest<String> request = new HttpRequest<>(method, headers, body);
+		EndPointWrapper<?> endpoint = getEndPoint(uri.getPath(), method);
+		if ( endpoint != null )
+			body = getGenericObject(body.toString(), endpoint.getBodyType());
+		HttpRequest<?> request = new HttpRequest<>(method, headers, body);
 		request.uri = uri;
 		
 		// Return
@@ -186,7 +220,8 @@ public abstract class RestServer {
 	
     protected static <T> HttpResponse<T> readResponse(HttpURLConnection connection, T type) throws IOException {
     	// Read body
-    	String body = new String(readAll(connection.getInputStream()), Charset.forName("UTF-8"));
+    	byte[] data = readAll(connection.getInputStream());
+    	String body = new String(data, Charset.forName("UTF-8"));
     	
     	// Create response headers
     	HttpHeaders headers = new HttpHeaders();
@@ -267,7 +302,7 @@ public abstract class RestServer {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <T> T getGenericObject(String body, T type) {
+	protected static <T> T getGenericObject(String body, T type) {
 		if ( body == null || body.length() == 0 )
 			return (T)null;
 
@@ -276,14 +311,12 @@ public abstract class RestServer {
 		// Convert to gson tree
 		if ( JsonObject.class.isAssignableFrom(c) ) {
 			Type empMapType = new TypeToken<Map<String, Object>>() {}.getType();
-			Gson gson = new Gson();
 			return (T) gson.toJsonTree(gson.fromJson(body, empMapType)).getAsJsonObject();
 		}
 		
 		// json array
 		if ( JsonArray.class.isAssignableFrom(c) ) {
 			Type empMapType = new TypeToken<List<Object>>() {}.getType();
-			Gson gson = new Gson();
 			Object obj = gson.fromJson(body, empMapType);
 			return (T) gson.toJsonTree(obj).getAsJsonArray();
 		}
@@ -291,20 +324,16 @@ public abstract class RestServer {
 		// Convert to map
 		if ( Map.class.isAssignableFrom(c) ) {
 			Type empMapType = new TypeToken<Map<String, Object>>() {}.getType();
-			return new Gson().fromJson(body, empMapType);
+			return gson.fromJson(body, empMapType);
 		}
 		
 		// Convert to list
 		if ( List.class.isAssignableFrom(c) ) {
 			Type empMapType = new TypeToken<List<Object>>() {}.getType();
-			return new Gson().fromJson(body, empMapType);
+			return gson.fromJson(body, empMapType);
 		}
 		
-		// Convert to string
-		if ( String.class.isAssignableFrom(c) || c.equals(String.class) )
-			return (T) body.toString();
-		
-		// Fallback i guess
+		// Fallback is string
 		return (T) body.toString();
 	}
 }
