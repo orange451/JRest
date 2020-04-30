@@ -65,14 +65,14 @@ public class RequestEntity<T> extends HttpEntity<T> {
 				con.setDoOutput(true);
 			con.setRequestMethod(this.getMethod().toString());
 
+			// Hidden headers
+			if ( this.getHeaders().get("Host") == null )
+				this.getHeaders().put("Host", url.getHost());
+			
         	// Write headers
 			for (Entry<String, String> entry : this.getHeaders().entrySet()) {
 				try { con.setRequestProperty(entry.getKey(), entry.getValue()); } catch( Exception e) {}
 			}
-			
-			// Hidden headers
-			if ( this.getHeaders().get("Host") == null )
-				this.getHeaders().put("Host", url.getHost());
             
             // Get usable body
         	String body = null;
