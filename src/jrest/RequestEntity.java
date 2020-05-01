@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
 import java.util.Map.Entry;
 
 public class RequestEntity<T> extends HttpEntity<T> {
@@ -36,27 +37,38 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		return this.method;
 	}
 	
-	public <P, Q> void exchangeAsync(String url, Class<Q> type, AsyncResponse<Q> response) throws MalformedURLException {
-		this.exchangeAsync(new URL(url), type, response);
+	public <P, Q> void exchangeAsync(String url, Class<Q> responseType, AsyncResponse<Q> response) throws MalformedURLException {
+		this.exchangeAsync(new URL(url), responseType, response);
 	}
 	
-	public <P, Q> void exchangeAsync(URL url, Class<Q> type, AsyncResponse<Q> response) {
+	public <P, Q> void exchangeAsync(URL url, Class<Q> responseType, AsyncResponse<Q> response) {
 		new Thread(()->{
 			try {
-				response.response(exchange(url, type));
+				response.response(exchange(url, responseType));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}).start();
 	}
 	
-	public ResponseEntity<T> exchange(String url, Class<T> type) throws MalformedURLException,IOException {
-		return this.exchange(new URL(url), type);
+	public ResponseEntity<T> exchange(String url, Class<T> responseType) throws MalformedURLException,IOException {
+		return this.exchange(new URL(url), responseType);
 	}
 	
-	public <P, Q> ResponseEntity<Q> exchange(URL url, Class<Q> type) throws IOException {
+	public <P, Q> ResponseEntity<Q> exchange(URL url, Class<Q> responseType) throws IOException {
 		// Connect to endpoint
 		try {
+			
+			// Manual check for url form encoded
+			boolean bodyInUrl = false;
+			String urlParameters = null;
+			if ( this.getHeaders() != null && this.getHeaders().getContentType().equals(MediaType.APPLICATION_FORM_URLENCODED_VALUE) && this.getBody() instanceof Map ) {
+				bodyInUrl = true;
+				urlParameters = "";
+			    for (Object key : ((Map)this.getBody()).keySet())
+			    	urlParameters = urlParameters + key + "=" + ((Map)this.getBody()).get(key) + "&";
+			    urlParameters.substring(0, urlParameters.length()-1);
+			}
 			
 			// Connect
 			HttpURLConnection con = (HttpURLConnection) url.openConnection();
@@ -76,10 +88,13 @@ public class RequestEntity<T> extends HttpEntity<T> {
             
             // Get usable body
         	String body = null;
-        	if ( getBody() != null )
+        	if ( getBody() != null && !bodyInUrl )
         		body = getBody().toString();
         	else
         		body = new String();
+        	
+        	if ( bodyInUrl )
+        		body = urlParameters;
             
         	// Write body
 			if ( !this.getMethod().equals(HttpMethod.GET) ) {
@@ -90,7 +105,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 
         	// Get response
         	@SuppressWarnings("unchecked")
-			HttpResponse<Q> response = (HttpResponse<Q>) RestServer.readResponse(con, type);
+			HttpResponse<Q> response = (HttpResponse<Q>) RestServer.readResponse(con, responseType);
         	con.getInputStream().close();
         	if ( response == null ) {
         		return new ResponseEntity<Q>(HttpStatus.NOT_FOUND);

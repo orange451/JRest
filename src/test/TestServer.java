@@ -65,6 +65,19 @@ public class TestServer extends RestServer {
 			
 			return new ResponseEntity<JsonObject>(HttpStatus.OK, jsonObject);
 		});
+		
+		/**
+		 * Test JSON endpoint. Returns a JSON object.
+		 */
+		this.addEndpoint(HttpMethod.POST, "/testForm", MediaType.APPLICATION_FORM_URLENCODED, MediaType.APPLICATION_JSON, (request)->{
+			JsonObject jsonObject = new JsonObject();
+			if ( request.getUrlParameters().containsKey("id") && "123".equals(request.getUrlParameters().get("id")))
+				jsonObject.addProperty("Message", "Access Granted");
+			else
+				jsonObject.addProperty("Message", "Invalid Credentials");
+			
+			return new ResponseEntity<JsonObject>(HttpStatus.OK, jsonObject);
+		});
 	}
 	
 	@Override

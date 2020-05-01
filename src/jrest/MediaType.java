@@ -14,6 +14,9 @@ public class MediaType {
 	public static final String TEXT_HTML_VALUE = "text/html";
 	public static final MediaType TEXT_HTML = new MediaType(TEXT_HTML_VALUE);
 	
+	public static final String APPLICATION_FORM_URLENCODED_VALUE = "application/x-www-form-urlencoded";
+	public static final MediaType APPLICATION_FORM_URLENCODED = new MediaType(APPLICATION_FORM_URLENCODED_VALUE);
+	
 	private String type;
 	
 	MediaType(String type) {

@@ -156,6 +156,19 @@ public abstract class RestServer {
 			b.close();
 		}
 	}
+	
+	private Map<String, String> convertParams(String str) {
+		Map<String, String> params = new HashMap<>();
+		String[] paramsplit = str.split("&");
+		for (String paramStr : paramsplit) {
+			String[] t = paramStr.split("=", 2);
+			if (t.length == 2) {
+				params.put(t[0], t[1]);
+			}
+		}
+		
+		return params;
+	}
 
 	protected <T> HttpRequest<Object> parseRequest(String address, int port, InputStream inputStream) throws IOException {
 
@@ -175,16 +188,9 @@ public abstract class RestServer {
 		String apiString = t1[1];
 		String[] apisplit = apiString.split("\\?", 2);
 		String api = apisplit[0];
-		Map<String, String> params = new HashMap<>();
-		if (apisplit.length > 1) {
-			String[] paramsplit = apisplit[1].split("&");
-			for (String paramStr : paramsplit) {
-				String[] t = paramStr.split("=", 2);
-				if (t.length == 2) {
-					params.put(t[0], t[1]);
-				}
-			}
-		}
+		Map<String, String> urlparams = null;
+		if ( apisplit.length > 1 )
+			urlparams = convertParams(apisplit[1]);
 
 		// Create headers
 		HttpHeaders headers = new HttpHeaders();
@@ -202,11 +208,17 @@ public abstract class RestServer {
 		String host = address.replace("0:0:0:0:0:0:0:1", "127.0.0.1");
 		URI uri = URI.create("http://" + host + ":" + port + api);
 		EndPointWrapper<?, ?> endpoint = getEndPoint(uri.getPath(), method);
-		if (endpoint != null)
-			body = RestUtil.convertObject(body.toString(), endpoint.getBodyType());
+		if (endpoint != null) {
+			if ( endpoint.getConsumes().equals(MediaType.APPLICATION_FORM_URLENCODED) ) {
+				urlparams = convertParams(body.toString());
+				body = null;
+			} else {
+				body = RestUtil.convertObject(body.toString(), endpoint.getBodyType());
+			}
+		}
 		HttpRequest<Object> request = new HttpRequest<>(method, headers, body);
 		request.uri = uri;
-		request.urlParams = params;
+		request.urlParams = urlparams;
 
 		// Return
 		return request;

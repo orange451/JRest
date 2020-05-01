@@ -11,12 +11,8 @@ import jrest.RequestEntity;
 public class TestURLParams {
 
 	public TestURLParams() throws MalformedURLException {
-		// Create payload
-		JsonObject body = new JsonObject();
-		body.addProperty("id", 1);
-		
 		// Create request object
-		RequestEntity<JsonObject> request = new RequestEntity<>(HttpMethod.GET, body);
+		RequestEntity<JsonObject> request = new RequestEntity<>(HttpMethod.GET);
 		
 		// Send request to server
 		request.exchangeAsync("http://localhost/GetUsername?id=3", String.class, (response)->{
