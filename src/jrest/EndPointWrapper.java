@@ -31,8 +31,8 @@ class EndPointWrapper<P, Q> {
 
 	public ResponseEntity<Q> query(HttpRequest<P> request) {
 		try {
-			String bodyString = request.getBody()==null?new String():request.getBody().toString();
-			HttpRequest<P> useRequest = new HttpRequest<P>(request.getMethod(), request.getHeaders(), (P) RestUtil.convertObject(bodyString, getBodyType()));
+			//String bodyString = request.getBody()==null?new String():request.getBody().toString();
+			HttpRequest<P> useRequest = new HttpRequest<P>(request.getMethod(), request.getHeaders(), request.getBody());
 			useRequest.uri = request.getURI();
 			useRequest.urlParams = request.getUrlParameters();
 			return getEndpoint().run(useRequest);
