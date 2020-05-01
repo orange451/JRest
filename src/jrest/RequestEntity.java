@@ -65,8 +65,8 @@ public class RequestEntity<T> extends HttpEntity<T> {
 			if ( this.getHeaders() != null && this.getHeaders().getContentType().equals(MediaType.APPLICATION_FORM_URLENCODED_VALUE) && this.getBody() instanceof Map ) {
 				bodyInUrl = true;
 				urlParameters = "";
-			    for (Object key : ((Map)this.getBody()).keySet())
-			    	urlParameters = urlParameters + key + "=" + ((Map)this.getBody()).get(key) + "&";
+			    for (Object key : ((Map<?, ?>)this.getBody()).keySet())
+			    	urlParameters = urlParameters + key + "=" + ((Map<?, ?>)this.getBody()).get(key) + "&";
 			    urlParameters.substring(0, urlParameters.length()-1);
 			}
 			
