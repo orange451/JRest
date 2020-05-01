@@ -4,7 +4,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-public class HttpRequest<T> extends HttpEntity<T> {
+public class HttpRequest<P> extends HttpEntity<P> {
 	
 	private HttpMethod method;
 	
@@ -20,7 +20,7 @@ public class HttpRequest<T> extends HttpEntity<T> {
 		this(method, headers, null);
 	}
 	
-	public HttpRequest(HttpMethod method, HttpHeaders headers, T body) {
+	public HttpRequest(HttpMethod method, HttpHeaders headers, P body) {
 		super(headers, body);
 		this.method = method;
 		this.urlParams = new HashMap<>();

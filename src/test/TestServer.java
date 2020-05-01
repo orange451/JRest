@@ -36,7 +36,7 @@ public class TestServer extends RestServer {
 		/**
 		 * Test Post endpoint. Returns your posted data back to you.
 		 */
-		this.addEndpoint(HttpMethod.POST, "/GetEmployee", JsonObject.class, (request)->{
+		this.addEndpoint(HttpMethod.POST, "/GetEmployee", MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, JsonObject.class, (request)->{
 			JsonObject payload = request.getBody();
 			int id = payload.get("id").getAsInt();
 			

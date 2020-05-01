@@ -22,8 +22,7 @@ import java.util.Map;
 public abstract class RestServer {
 	private static ServerSocket server;
 
-	@SuppressWarnings("rawtypes")
-	private final Map<String, Map<HttpMethod, EndPointWrapper>> endpointMap = new HashMap<>();
+	private final Map<String, Map<HttpMethod, EndPointWrapper<?,?>>> endpointMap = new HashMap<>();
 
 	private boolean started;
 	
@@ -118,7 +117,7 @@ public abstract class RestServer {
 	}
 
 	@SuppressWarnings("unchecked")
-	protected <T> void onRequest(Socket socket, HttpRequest<?> request)
+	protected <P,Q> void onRequest(Socket socket, HttpRequest<P> request)
 			throws UnsupportedEncodingException, IOException {
 		// Log
 		if (request != null)
@@ -126,9 +125,9 @@ public abstract class RestServer {
 					+ "] Incoming request: " + request);
 
 		// Get matching endpoint
-		EndPointWrapper<T> endpoint = getEndPoint(request.getURI().getPath(), request.getMethod());
+		EndPointWrapper<P, Q> endpoint = (EndPointWrapper<P, Q>) getEndPoint(request.getURI().getPath(), request.getMethod());
 		if (endpoint != null) {
-			ResponseEntity<T> response = endpoint.query((HttpRequest<T>) request);
+			ResponseEntity<Q> response = endpoint.query(request);
 			if (response == null)
 				response = new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 
@@ -158,7 +157,7 @@ public abstract class RestServer {
 		}
 	}
 
-	protected <T> HttpRequest<?> parseRequest(String address, int port, InputStream inputStream) throws IOException {
+	protected <T> HttpRequest<Object> parseRequest(String address, int port, InputStream inputStream) throws IOException {
 
 		// Parse input into strings
 		List<String> headerData = readRequestData(inputStream);
@@ -202,10 +201,10 @@ public abstract class RestServer {
 		// Create request object
 		String host = address.replace("0:0:0:0:0:0:0:1", "127.0.0.1");
 		URI uri = URI.create("http://" + host + ":" + port + api);
-		EndPointWrapper<?> endpoint = getEndPoint(uri.getPath(), method);
+		EndPointWrapper<?, ?> endpoint = getEndPoint(uri.getPath(), method);
 		if (endpoint != null)
 			body = RestUtil.convertObject(body.toString(), endpoint.getBodyType());
-		HttpRequest<?> request = new HttpRequest<>(method, headers, body);
+		HttpRequest<Object> request = new HttpRequest<>(method, headers, body);
 		request.uri = uri;
 		request.urlParams = params;
 
@@ -271,8 +270,8 @@ public abstract class RestServer {
 		return headerData;
 	}
 
-	private EndPointWrapper getEndPoint(String endpoint, HttpMethod method) {
-		Map<HttpMethod, EndPointWrapper> map = endpointMap.get(endpoint);
+	private EndPointWrapper<?, ?> getEndPoint(String endpoint, HttpMethod method) {
+		Map<HttpMethod, EndPointWrapper<?,?>> map = endpointMap.get(endpoint);
 		if (map == null)
 			return null;
 
@@ -321,16 +320,15 @@ public abstract class RestServer {
 	 * @param bodyType Type of class we expect to send with our response
 	 * @param object   Business logic interface
 	 */
-	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, T bodyType,
-			EndPoint<T> object) {
+	public <P, Q> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, Class<P> bodyType, EndPoint<Q,P> object) {
 		if (!endpointMap.containsKey(endpoint))
 			endpointMap.put(endpoint, new HashMap<>());
 
-		Map<HttpMethod, EndPointWrapper> t = endpointMap.get(endpoint);
+		Map<HttpMethod, EndPointWrapper<?,?>> t = endpointMap.get(endpoint);
 		if (t == null)
 			return;
 
-		t.put(method, new EndPointWrapper<T>(object, consumes, produces, bodyType));
+		t.put(method, new EndPointWrapper<P, Q>(object, consumes, produces, bodyType));
 		System.out.println("Registered endpoint\t[" + method + "]\t " + endpoint);
 	}
 
@@ -344,8 +342,7 @@ public abstract class RestServer {
 	 * @param bodyType Type of class we expect to send with our response
 	 * @param object   Business logic interface
 	 */
-	public <T> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<T> bodyType,
-			EndPoint object) {
+	public <P, Q> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<P> bodyType, EndPoint<Q,P> object) {
 		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, bodyType, object);
 	}
 
@@ -359,7 +356,7 @@ public abstract class RestServer {
 	 * @param bodyType Type of class we expect to send with our response
 	 * @param object   Business logic interface
 	 */
-	public <T> void addEndpoint(HttpMethod method, String endpoint, Class<T> bodyType, EndPoint<T> object) {
+	public <P, Q> void addEndpoint(HttpMethod method, String endpoint, Class<P> bodyType, EndPoint<Q,P> object) {
 		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, bodyType, object);
 	}
 
@@ -373,8 +370,7 @@ public abstract class RestServer {
 	 * @param produces Type of media this endpoint will produce
 	 * @param object   Business logic interface
 	 */
-	public void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces,
-			EndPoint object) {
+	public <P,Q> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, EndPoint object) {
 		addEndpoint(method, endpoint, consumes, produces, Object.class, object);
 	}
 
@@ -387,7 +383,7 @@ public abstract class RestServer {
 	 * @param consumes Type of media this endpoint will consume and produce
 	 * @param object   Business logic interface
 	 */
-	public void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, EndPoint object) {
+	public <P,Q> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, EndPoint<Q,P> object) {
 		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, object);
 	}
 
@@ -400,7 +396,7 @@ public abstract class RestServer {
 	 * @param endpoint Endpoint API URL (Start with /)
 	 * @param object   Business logic interface
 	 */
-	public void addEndpoint(HttpMethod method, String endpoint, EndPoint object) {
+	public <P,Q> void addEndpoint(HttpMethod method, String endpoint, EndPoint<Q,P> object) {
 		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, object);
 	}
 
@@ -411,7 +407,7 @@ public abstract class RestServer {
 	 * @param endpoint Endpoint API URL (Start with /)
 	 * @param object   Business logic interface
 	 */
-	public void addEndpoint(String endpoint, EndPoint object) {
+	public <P,Q> void addEndpoint(String endpoint, EndPoint<Q,P> object) {
 		addEndpoint(HttpMethod.GET, endpoint, object);
 	}
 }

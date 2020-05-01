@@ -1,19 +1,19 @@
 package jrest;
 
-class EndPointWrapper<T> {
-	private EndPoint<T> endpoint;
+class EndPointWrapper<P, Q> {
+	private EndPoint<Q,P> endpoint;
 	private MediaType consumes;
 	private MediaType produces;
-	private T bodyType;
+	private Class<P> bodyType;
 
-	public EndPointWrapper(EndPoint<T> endpoint, MediaType consumes, MediaType produces, T bodyType) {
+	public EndPointWrapper(EndPoint<Q,P> endpoint, MediaType consumes, MediaType produces, Class<P> bodyType) {
 		this.endpoint = endpoint;
 		this.consumes = consumes;
 		this.produces = produces;
 		this.bodyType = bodyType;
 	}
 
-	public EndPoint<T> getEndpoint() {
+	public EndPoint<Q,P> getEndpoint() {
 		return this.endpoint;
 	}
 	
@@ -25,14 +25,14 @@ class EndPointWrapper<T> {
 		return this.produces;
 	}
 	
-	public T getBodyType() {
+	public Class<P> getBodyType() {
 		return this.bodyType;
 	}
 
-	public ResponseEntity<T> query(HttpRequest<T> request) {
+	public ResponseEntity<Q> query(HttpRequest<P> request) {
 		try {
 			String bodyString = request.getBody()==null?new String():request.getBody().toString();
-			HttpRequest<T> useRequest = new HttpRequest<T>(request.getMethod(), request.getHeaders(), RestUtil.convertObject(bodyString, getBodyType()));
+			HttpRequest<P> useRequest = new HttpRequest<P>(request.getMethod(), request.getHeaders(), (P) RestUtil.convertObject(bodyString, getBodyType()));
 			useRequest.uri = request.getURI();
 			useRequest.urlParams = request.getUrlParameters();
 			return getEndpoint().run(useRequest);

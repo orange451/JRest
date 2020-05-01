@@ -1,6 +1,6 @@
 package jrest;
 
 @FunctionalInterface
-public interface EndPoint<T> {
-	public ResponseEntity<T> run(HttpRequest<T> request);
+public interface EndPoint<Q,P> {
+	public ResponseEntity<Q> run(HttpRequest<P> request);
 }
