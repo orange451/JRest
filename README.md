@@ -1,6 +1,8 @@
 # JRest
 Small and Lightweight Rest Library. Very barebones.
 
+Requires Gson Dependecncy
+
 Simple GET request:
 ```java
 // Send request
