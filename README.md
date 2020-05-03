@@ -1,5 +1,5 @@
 # JRest
-Small and Lightweight Rest Library. Very barebones.
+Small and Lightweight Java Rest Library. Very barebones.
 
 Requires Gson Dependecncy
 
