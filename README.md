@@ -60,7 +60,7 @@ public class TestServer extends RestServer {
 }
 ```
 
-Using DTO/POJO objects:
+Serialize Maps to JsonObjects:
 ```Java
 /**
  * SERVER CODE
@@ -97,7 +97,7 @@ request.exchangeAsync("http://localhost/GetEmployee", JsonObject.class, (respons
 });
 ```
 
-More DTO
+Using DTO/POJO objects:
 ```Java
 public class TestDTO {
 
