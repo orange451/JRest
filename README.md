@@ -162,5 +162,4 @@ this.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{
    return new ResponseEntity<String>(HttpStatus.OK, "<h1>Index! Welcome to JREST!</h1>");
 });
 ```
-
-[testImage](https://i.imgur.com/jrYyeFv.png)
+![testImage](https://i.imgur.com/jrYyeFv.png)
