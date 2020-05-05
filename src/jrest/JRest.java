@@ -39,6 +39,9 @@ public class JRest {
 	/** Port the server is running on **/
 	private int port = 80;
 	
+	/** Whether requests get logged to console **/
+	private boolean logRequests = true;
+	
 	/** Use {@link JRest#create()} to create a new JRest instance **/
 	private JRest() {
 		//
@@ -154,9 +157,8 @@ public class JRest {
 	protected <P,Q> void onRequest(Socket socket, HttpRequest<P> request)
 			throws UnsupportedEncodingException, IOException {
 		// Log
-		if (request != null)
-			System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis())
-					+ "] Incoming request: " + request);
+		if (request != null && isLogRequests())
+			System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
 
 		// Get matching endpoint
 		EndPointWrapper<P, Q> endpoint = (EndPointWrapper<P, Q>) getEndPoint(request.getURI().getPath(), request.getMethod());
@@ -372,6 +374,21 @@ public class JRest {
 		
 		this.port = port;
 		return this;
+	}
+	
+	/**
+	 * Sets whether requests are logged or not.
+	 */
+	public JRest setLogRequests(boolean log) {
+		this.logRequests = log;
+		return this;
+	}
+	
+	/**
+	 * Returns whether requests are logged or not.
+	 */
+	public boolean isLogRequests() {
+		return this.logRequests;
 	}
 
 	/**
