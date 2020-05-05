@@ -2,9 +2,12 @@ package jrest;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -31,6 +34,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 	public RequestEntity(HttpMethod method, HttpHeaders headers, T body) {
 		super(headers, body);
 		this.method = method;
+		this.cookies = new ArrayList<HttpCookie>(JRest.cookieManager.getCookieStore().getCookies());
 	}
 	
 	public HttpMethod getMethod() {
@@ -81,6 +85,16 @@ public class RequestEntity<T> extends HttpEntity<T> {
 			if ( this.getHeaders().get("Host") == null )
 				this.getHeaders().put("Host", url.getHost());
 			
+			// Cookies!
+			if (getCookies().size() > 0) {
+				List<HttpCookie> cookiesList = getCookies();
+				List<String> cookies = new ArrayList<>();
+				for (HttpCookie cookie : cookiesList) {
+					cookies.add(cookie.toString());
+				}
+				con.setRequestProperty("Cookie", String.join(";", cookies));
+			}
+			
         	// Write headers
 			for (Entry<String, String> entry : this.getHeaders().entrySet()) {
 				try { con.setRequestProperty(entry.getKey(), entry.getValue()); } catch( Exception e) {}
@@ -110,7 +124,9 @@ public class RequestEntity<T> extends HttpEntity<T> {
         	if ( response == null ) {
         		return new ResponseEntity<Q>(HttpStatus.NOT_FOUND);
         	} else {
-        		return new ResponseEntity<Q>(response.getStatus(), response.getHeaders(), response.getBody());
+        		ResponseEntity<Q> res = new ResponseEntity<Q>(response.getStatus(), response.getHeaders(), response.getBody());
+        		res.cookies = response.cookies;
+        		return res;
         	}
 		} catch (IOException e) {
 			e.printStackTrace();

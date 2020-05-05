@@ -35,6 +35,7 @@ class EndPointWrapper<P, Q> {
 			HttpRequest<P> useRequest = new HttpRequest<P>(request.getMethod(), request.getHeaders(), request.getBody());
 			useRequest.uri = request.getURI();
 			useRequest.urlParams = request.getUrlParameters();
+			useRequest.cookies = request.getCookies();
 			return getEndpoint().run(useRequest);
 		} catch (Exception e) {
 			e.printStackTrace();

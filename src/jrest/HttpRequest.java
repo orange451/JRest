@@ -1,7 +1,9 @@
 package jrest;
 
+import java.net.HttpCookie;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class HttpRequest<P> extends HttpEntity<P> {
