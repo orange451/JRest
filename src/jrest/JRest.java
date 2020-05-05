@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class RestServer {
+public class JRest {
 	private static ServerSocket server;
 
 	private final Map<String, Map<HttpMethod, EndPointWrapper<?,?>>> endpointMap = new HashMap<>();
@@ -28,17 +28,39 @@ public abstract class RestServer {
 	
 	private boolean error;
 	
-	private String serverName;
+	private String serverName = "JRest : Lightweight REST Server";
+	
+	private int port = 80;
+	
 
-	public RestServer() {
-		this.serverName = "JRest : Lightweight REST Server";
+	private JRest() {
+		//
+	}
+	
+	public static JRest create() {
+		return new JRest();
+	}
+
+	public JRest start() {
 		
+		// Server initializing
+		if ( server != null ) {
+			System.err.println("Server is currently initializing. Please wait");
+			return this;
+		}
+		
+		// Server already started
+		if ( started ) {
+			System.err.println("Server is already started on port: " + port);
+			return this;
+		}
+		
+		// Start new server
 		new Thread(() -> {
 			try {
-				server = new ServerSocket(getPort());
+				server = new ServerSocket(port);
 				server.setSoTimeout(0);
-				System.out.println("REST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":"
-						+ server.getLocalPort());
+				System.out.println("REST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort());
 				started = true;
 				while (true) {
 
@@ -103,6 +125,7 @@ public abstract class RestServer {
 					e.printStackTrace();
 				}
 				started = false;
+				server = null;
 			}
 		}).start();
 
@@ -114,6 +137,8 @@ public abstract class RestServer {
 				e.printStackTrace();
 			}
 		}
+		
+		return this;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -290,8 +315,6 @@ public abstract class RestServer {
 		return map.get(method);
 	}
 
-	public abstract int getPort();
-
 	/**
 	 * Returns whether the rest server has finished initializing.
 	 */
@@ -310,8 +333,9 @@ public abstract class RestServer {
 	/**
 	 * Gets the name of the server used in HTTP responses
 	 */
-	public void setServerName(String name) {
+	public JRest setServerName(String name) {
 		this.serverName = name;
+		return this;
 	}
 	
 	/**
@@ -319,6 +343,26 @@ public abstract class RestServer {
 	 */
 	public String getServerName() {
 		return this.serverName;
+	}
+	
+	/**
+	 * Return the port the server is running on.
+	 */
+	public int getPort() {
+		return this.port;
+	}
+	
+	/**
+	 * Set the port the server will run on. Must be called before starting the server.
+	 */
+	public JRest setPort(int port) {
+		if ( started || server != null ) {
+			System.err.println("Port cannot be specified on a server that is starting or has been started.");
+			return this;
+		}
+		
+		this.port = port;
+		return this;
 	}
 
 	/**
@@ -382,6 +426,7 @@ public abstract class RestServer {
 	 * @param produces Type of media this endpoint will produce
 	 * @param object   Business logic interface
 	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public <P,Q> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, EndPoint object) {
 		addEndpoint(method, endpoint, consumes, produces, Object.class, object);
 	}

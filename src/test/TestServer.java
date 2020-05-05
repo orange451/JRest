@@ -5,38 +5,44 @@ import jrest.HttpMethod;
 import jrest.HttpStatus;
 import jrest.MediaType;
 import jrest.ResponseEntity;
-import jrest.RestServer;
+import jrest.JRest;
 
-public class TestServer extends RestServer {
+public class TestServer {
 	
-	String[] names = {
+	static String[] names = {
 			"Frank",
 			"Jeff",
 			"Oliver",
 			"Maxwell"
 	};
-	
-	public TestServer() {
+
+	public static void main(String[] args) {
+		/**
+		 * Start server
+		 */
+		JRest server = JRest.create()
+				.setServerName("Test Server")
+				.setPort(80)
+				.start();
 		
 		/**
 		 * Test Endpoint. Returns static String
 		 */
-		this.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{
+		server.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{
 			return new ResponseEntity<String>(HttpStatus.OK, "<h1>Index! Welcome to JREST!</h1>");
 		});
 
-		
 		/**
 		 * Test Endpoint. Returns static String
 		 */
-		this.addEndpoint(HttpMethod.GET, "/testAPI", (request)->{
+		server.addEndpoint(HttpMethod.GET, "/testAPI", (request)->{
 			return new ResponseEntity<String>(HttpStatus.OK, "Hello From Server!");
 		});
 		
 		/**
 		 * Test Post endpoint. Returns your posted data back to you.
 		 */
-		this.addEndpoint(HttpMethod.POST, "/GetEmployee", MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, JsonObject.class, (request)->{
+		server.addEndpoint(HttpMethod.POST, "/GetEmployee", MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, JsonObject.class, (request)->{
 			JsonObject payload = request.getBody();
 			int id = payload.get("id").getAsInt();
 			
@@ -50,7 +56,7 @@ public class TestServer extends RestServer {
 		/**
 		 * Test Post endpoint. Returns your posted data back to you.
 		 */
-		this.addEndpoint(HttpMethod.GET, "/GetUsername", (request)->{
+		server.addEndpoint(HttpMethod.GET, "/GetUsername", (request)->{
 			int id = Integer.parseInt(request.getUrlParameters().get("id").toString());
 			String name = names[id-1];
 			return new ResponseEntity<String>(HttpStatus.OK, name);
@@ -59,7 +65,7 @@ public class TestServer extends RestServer {
 		/**
 		 * Test JSON endpoint. Returns a JSON object.
 		 */
-		this.addEndpoint(HttpMethod.GET, "/testJson", MediaType.ALL, MediaType.APPLICATION_JSON, (request)->{
+		server.addEndpoint(HttpMethod.GET, "/testJson", MediaType.ALL, MediaType.APPLICATION_JSON, (request)->{
 			JsonObject jsonObject = new JsonObject();
 			jsonObject.addProperty("TestKey", "Hello World!");
 			
@@ -69,7 +75,7 @@ public class TestServer extends RestServer {
 		/**
 		 * Test JSON endpoint. Returns a JSON object.
 		 */
-		this.addEndpoint(HttpMethod.POST, "/testForm", MediaType.APPLICATION_FORM_URLENCODED, MediaType.APPLICATION_JSON, (request)->{
+		server.addEndpoint(HttpMethod.POST, "/testForm", MediaType.APPLICATION_FORM_URLENCODED, MediaType.APPLICATION_JSON, (request)->{
 			JsonObject jsonObject = new JsonObject();
 			if ( request.getUrlParameters().containsKey("id") && "123".equals(request.getUrlParameters().get("id")))
 				jsonObject.addProperty("Message", "Access Granted");
@@ -78,14 +84,5 @@ public class TestServer extends RestServer {
 			
 			return new ResponseEntity<JsonObject>(HttpStatus.OK, jsonObject);
 		});
-	}
-	
-	@Override
-	public int getPort() {
-		return 80;
-	}
-
-	public static void main(String[] args) {
-		new TestServer();
 	}
 }
