@@ -1,11 +1,10 @@
 # JRest
-Small and Lightweight Java Rest Library. Very barebones.
+Small and lightweight Java Rest Library. Only has one dependency, Gson. It can be used as a webhost, back-end server, or to make requests to already existing REST endpoints. It doesn't use annotations, and works asynchrounously.
 
-Requires Gson Dependency
+(This was made as a side project, use at your own risk!)
 
 Simple GET request:
 ```java
-// Send request
 RequestEntity<String> request = new RequestEntity<>(HttpMethod.GET);
 ResponseEntity<String> response = request.exchange("http://localhost/testAPI", String.class);
 System.out.println(response.getBody());
