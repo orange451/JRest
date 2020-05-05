@@ -10,7 +10,9 @@ import jrest.RequestEntity;
 import jrest.ResponseEntity;
 
 public class TestClient {
-	public TestClient() throws MalformedURLException, IOException {
+	
+	public static void main(String[] args) throws MalformedURLException, IOException {
+		System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
 		
 		// Send request
 		RequestEntity<String> request1 = new RequestEntity<>(HttpMethod.GET);
@@ -39,11 +41,5 @@ public class TestClient {
 		request4.exchangeAsync("http://robloxwwii.com/RobloxServerList.php", JsonArray.class, (response)->{
 			System.out.println(response.getBody());
 		});
-	}
-
-	public static void main(String[] args) throws MalformedURLException, IOException {
-		System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
-		
-		new TestClient();
 	}
 }

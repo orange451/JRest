@@ -10,7 +10,8 @@ import jrest.RequestEntity;
 
 public class TestURLParams {
 
-	public TestURLParams() throws MalformedURLException {
+	public static void main(String[] args) throws MalformedURLException, IOException {
+		
 		// Create request object
 		RequestEntity<JsonObject> request = new RequestEntity<>(HttpMethod.GET);
 		
@@ -19,9 +20,5 @@ public class TestURLParams {
 			String name = response.getBody();
 			System.out.println("User name: " + name);
 		});
-	}
-
-	public static void main(String[] args) throws MalformedURLException, IOException {
-		new TestURLParams();
 	}
 }

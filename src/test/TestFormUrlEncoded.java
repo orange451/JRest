@@ -11,8 +11,8 @@ import jrest.MediaType;
 import jrest.RequestEntity;
 
 public class TestFormUrlEncoded {
-
-	public TestFormUrlEncoded() throws MalformedURLException {
+	
+	public static void main(String[] args) throws MalformedURLException, IOException {
 		
 		// Define Headers (This is how it'll know to use params in url not body)
 		HttpHeaders headers = new HttpHeaders();
@@ -30,9 +30,5 @@ public class TestFormUrlEncoded {
 			String name = response.getBody();
 			System.out.println("User name: " + name);
 		});
-	}
-
-	public static void main(String[] args) throws MalformedURLException, IOException {
-		new TestFormUrlEncoded();
 	}
 }

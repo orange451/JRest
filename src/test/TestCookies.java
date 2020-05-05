@@ -10,7 +10,9 @@ import jrest.HttpMethod;
 import jrest.RequestEntity;
 
 public class TestCookies {
+	
 	public static void main(String[] args) throws MalformedURLException, IOException {
+		
 		// Create request object with cookie
 		RequestEntity<JsonObject> request = new RequestEntity<>(HttpMethod.GET);
 		request.getCookies().add(new HttpCookie("HeyImCookie", "DontDeletePls"));

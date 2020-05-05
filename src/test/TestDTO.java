@@ -9,8 +9,9 @@ import jrest.HttpMethod;
 import jrest.RequestEntity;
 
 public class TestDTO {
-
-	public TestDTO() throws MalformedURLException {
+	
+	public static void main(String[] args) throws MalformedURLException, IOException {
+		
 		// Create payload
 		JsonObject body = new JsonObject();
 		body.addProperty("id", 1);
@@ -25,10 +26,6 @@ public class TestDTO {
 			System.out.println("\tid: " + employee.getId());
 			System.out.println("\tname: " + employee.getName());
 		});
-	}
-
-	public static void main(String[] args) throws MalformedURLException, IOException {
-		new TestDTO();
 	}
 }
 
