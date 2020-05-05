@@ -20,27 +20,36 @@ import java.util.List;
 import java.util.Map;
 
 public class JRest {
+	
+	/** Internal server socket used to send data to clients **/
 	private static ServerSocket server;
-
+	
+	/** Internal map to quickly locate endpoints **/
 	private final Map<String, Map<HttpMethod, EndPointWrapper<?,?>>> endpointMap = new HashMap<>();
 
+	/** Whether the server is started **/
 	private boolean started;
 	
+	/** Whether the server encountered an error starting **/
 	private boolean error;
 	
+	/** Name of the server when a request is made **/
 	private String serverName = "JRest : Lightweight REST Server";
 	
+	/** Port the server is running on **/
 	private int port = 80;
 	
-
+	/** Use {@link JRest#create()} to create a new JRest instance **/
 	private JRest() {
 		//
 	}
 	
+	/** Create new JRest instance. **/
 	public static JRest create() {
 		return new JRest();
 	}
 
+	/** Start server **/
 	public JRest start() {
 		
 		// Server initializing
