@@ -21,41 +21,40 @@ request.exchangeAsync("http://localhost/testJson", JsonObject.class, (response)-
 
 Simple Rest Server:
 ```java
-public class TestServer extends RestServer {
-	public TestServer() {
-		
+public class TestServer {
+
+	public static void main(String[] args) {
+		/**
+		 * Start server
+		 */
+		JRest server = JRest.create()
+				.setServerName("Test Server")
+				.setPort(80)
+				.start();
+				
 		/**
 		 * Test Endpoint. Returns static String
 		 */
-		this.addEndpoint(HttpMethod.GET, "/testAPI", (request)->{
+		server.addEndpoint(HttpMethod.GET, "/testAPI", (request)->{
 			return new ResponseEntity<String>(HttpStatus.OK, "Hello From Server!");
 		});
 		
 		/**
 		 * Test Post endpoint. Returns your posted data back to you.
 		 */
-		this.addEndpoint(HttpMethod.POST, "/testPost", MediaType.ALL, MediaType.ALL, (request)->{
+		server.addEndpoint(HttpMethod.POST, "/testPost", MediaType.ALL, MediaType.ALL, (request)->{
 			return new ResponseEntity<String>(HttpStatus.OK, request.getBody().toString());
 		});
 		
 		/**
 		 * Test JSON endpoint. Returns a JSON object.
 		 */
-		this.addEndpoint(HttpMethod.GET, "/testJson", MediaType.ALL, MediaType.APPLICATION_JSON, (request)->{
+		server.addEndpoint(HttpMethod.GET, "/testJson", MediaType.ALL, MediaType.APPLICATION_JSON, (request)->{
 			JsonObject jsonObject = new JsonObject();
 			jsonObject.addProperty("TestKey", "Hello World!");
 			
 			return new ResponseEntity<JsonObject>(HttpStatus.OK, jsonObject);
 		});
-	}
-	
-	@Override
-	public int getPort() {
-		return 80;
-	}
-
-	public static void main(String[] args) {
-		new TestServer();
 	}
 }
 ```
@@ -65,7 +64,7 @@ Serialize Maps to JsonObjects:
 /**
  * SERVER CODE
  */
-this.addEndpoint(HttpMethod.POST, "/GetEmployee", JsonObject.class, (request)->{
+server.addEndpoint(HttpMethod.POST, "/GetEmployee", JsonObject.class, (request)->{
    JsonObject payload = request.getBody();
    int id = payload.get("id").getAsInt();
    
@@ -158,7 +157,7 @@ Host a webserver:
 /**
  * SERVER CODE
  */
-this.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{
+server.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{
    return new ResponseEntity<String>(HttpStatus.OK, "<h1>Index! Welcome to JREST!</h1>");
 });
 ```
