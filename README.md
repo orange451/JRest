@@ -31,7 +31,7 @@ public class TestServer {
 				.start();
 		
 		/**
-		 * Open in a web browser! http://localhost:80
+		 * Open in a web browser! http://localhost/
 		 */		
 		server.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{
 			return new ResponseEntity<String>(HttpStatus.OK, "<h1>Index! Welcome to JREST!</h1>");
