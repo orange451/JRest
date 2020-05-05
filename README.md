@@ -1,8 +1,9 @@
 # JRest
 Small and lightweight Java Rest Library. **Only has one dependency, Gson (For POJO Serialization)**. It can be used as a webhost, back-end server, or to make requests to already existing REST endpoints. It doesn't use annotations, and works asynchrounously.
-
+---
 (This was made as a side project, use at your own risk!)
 
+# Examples
 Simple GET request:
 ```java
 RequestEntity<String> request = new RequestEntity<>(HttpMethod.GET);
