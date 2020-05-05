@@ -42,6 +42,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		return this.method;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public <P, Q> void exchangeAsync(String url, AsyncResponse<Q> response) throws MalformedURLException {
 		this.exchangeAsync(url, (Class<Q>)Object.class, response);
 	}
@@ -50,6 +51,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		this.exchangeAsync(new URL(url), responseType, response);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public <P, Q> void exchangeAsync(URL url, AsyncResponse<Q> response) {
 		this.exchangeAsync(url, (Class<Q>)Object.class, response);
 	}
