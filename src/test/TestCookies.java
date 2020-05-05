@@ -12,12 +12,17 @@ public class TestCookies {
 	public static void main(String[] args) throws MalformedURLException, IOException {
 		URL endpoint = new URL("http://localhost/testCookie");
 		
-		// Send request to server, server will give us a cookie.
+		/**
+		 * Send first request to endpoint. This endpoint should respond with a cookie.
+		 */
 		new RequestEntity<>(HttpMethod.GET).exchangeAsync(endpoint, (response)->{
-			System.out.println("Received cookies (1): " + response.getCookies());
-			System.out.println("Received message (2): " + response.getBody());
+			System.out.println("Received message (1): " + response.getBody());
+			System.out.println("Received cookies (2): " + response.getCookies());
 			
-			// Send second request, this will automatically send back cookie sent from server.
+			/**
+			 * Second request. Server sent us cookie in first request, so we will automatically send it back in second one.
+			 * Server is programmed to respond with a different message when it receives a cookie.
+			 */
 			new RequestEntity<>(HttpMethod.GET).exchangeAsync(endpoint, (response2)->{
 				System.out.println("Received message (3): " + response2.getBody());
 			});
