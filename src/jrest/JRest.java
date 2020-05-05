@@ -157,7 +157,7 @@ public class JRest {
 					break;
 
 				// Parse sockets request
-				HttpRequest<?> request = parseRequest(JRest.this, incoming);
+				HttpRequest<?> request = parseRequest(incoming);
 				if (request == null)
 					continue;
 
@@ -178,7 +178,7 @@ public class JRest {
 	/**
 	 * Gets HttpRequest from socket connection
 	 */
-	private <T> HttpRequest<Object> parseRequest(JRest server, Socket incoming) throws IOException {
+	private <T> HttpRequest<Object> parseRequest(Socket incoming) throws IOException {
 		// Get incoming info
 		String address = incoming.getInetAddress().getHostAddress();
 		int port = incoming.getPort();
@@ -216,13 +216,14 @@ public class JRest {
 			headers.put(key, value);
 		}
 		
+		// Setup cookies
+		CookieManager cookieManager = cookieManagerServer.get(this).get(incoming);
+		if (cookieManager == null)
+			cookieManagerServer.get(this).put(incoming, cookieManager = new CookieManager());
+		
 		// Read in cookies
 		String cookiesHeader = headers.get("Cookie");
 		if (cookiesHeader != null) {
-			CookieManager cookieManager = cookieManagerServer.get(server).get(incoming);
-			if (cookieManager == null)
-				cookieManagerServer.get(server).put(incoming, cookieManager = new CookieManager());
-
 			String[] cookies = cookiesHeader.split(";");
 			for (String cookie : cookies) {
 				cookieManager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
@@ -244,8 +245,8 @@ public class JRest {
 		HttpRequest<Object> request = new HttpRequest<>(method, headers, body);
 		request.uri = uri;
 		request.urlParams = urlparams;
-		if (cookieManagerServer.get(server).get(incoming) != null)
-			request.cookies = new ArrayList<>(cookieManagerServer.get(server).get(incoming).getCookieStore().getCookies());
+		if (cookieManagerServer.get(this).get(incoming) != null)
+			request.cookies = new ArrayList<>(cookieManagerServer.get(this).get(incoming).getCookieStore().getCookies());
 		else 
 			request.cookies = new ArrayList<>();
 
@@ -269,6 +270,11 @@ public class JRest {
 			ResponseEntity<Q> response = endpoint.query(request);
 			if (response == null)
 				response = new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+			
+			// Put response cookies into manager
+			for (HttpCookie cookie : response.getCookies()) {
+				cookieManagerServer.get(this).get(socket).getCookieStore().add(null, cookie);
+			}
 
 			Object body = response.getBody();
 			if (body == null)

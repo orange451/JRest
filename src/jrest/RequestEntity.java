@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,8 +42,16 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		return this.method;
 	}
 	
+	public <P, Q> void exchangeAsync(String url, AsyncResponse<Q> response) throws MalformedURLException {
+		this.exchangeAsync(url, (Class<Q>)Object.class, response);
+	}
+	
 	public <P, Q> void exchangeAsync(String url, Class<Q> responseType, AsyncResponse<Q> response) throws MalformedURLException {
 		this.exchangeAsync(new URL(url), responseType, response);
+	}
+	
+	public <P, Q> void exchangeAsync(URL url, AsyncResponse<Q> response) {
+		this.exchangeAsync(url, (Class<Q>)Object.class, response);
 	}
 	
 	public <P, Q> void exchangeAsync(URL url, Class<Q> responseType, AsyncResponse<Q> response) {
@@ -126,6 +135,13 @@ public class RequestEntity<T> extends HttpEntity<T> {
         	} else {
         		ResponseEntity<Q> res = new ResponseEntity<Q>(response.getStatus(), response.getHeaders(), response.getBody());
         		res.cookies = response.cookies;
+        		for (HttpCookie cookie : res.cookies) {
+        			try {
+						JRest.cookieManager.getCookieStore().add(url.toURI(), cookie);
+					} catch (URISyntaxException e) {
+						//
+					}
+        		}
         		return res;
         	}
 		} catch (IOException e) {

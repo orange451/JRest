@@ -1,5 +1,7 @@
 package test;
 
+import java.net.HttpCookie;
+
 import com.google.gson.JsonObject;
 import jrest.HttpMethod;
 import jrest.HttpStatus;
@@ -83,6 +85,21 @@ public class TestServer {
 				jsonObject.addProperty("Message", "Invalid Credentials");
 			
 			return new ResponseEntity<JsonObject>(HttpStatus.OK, jsonObject);
+		});
+		
+		/**
+		 * Cookie test!
+		 */
+		server.addEndpoint(HttpMethod.GET, "/testCookie", MediaType.ALL, MediaType.APPLICATION_JSON, (request)->{
+			JsonObject jsonObject = new JsonObject();
+			if ( request.getCookie("TestCookie") != null)
+				jsonObject.addProperty("Message", "Access Granted");
+			else
+				jsonObject.addProperty("Message", "Invalid Credentials");
+			
+			ResponseEntity<JsonObject> response = new ResponseEntity<JsonObject>(HttpStatus.OK, jsonObject);
+			response.getCookies().add(new HttpCookie("TestCookie", "Message123"));
+			return response;
 		});
 	}
 }
