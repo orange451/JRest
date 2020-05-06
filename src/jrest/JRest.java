@@ -385,8 +385,6 @@ public class JRest {
 
 	private static List<String> readRequestData(InputStream inputStream) throws IOException {
 		long TIMEOUT = System.currentTimeMillis() + 1000;
-		
-		System.out.println("AAA");
 
 		BufferedInputStream bufferedInput = new BufferedInputStream(inputStream);
 		while (bufferedInput.available() == 0) {
