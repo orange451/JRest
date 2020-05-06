@@ -132,6 +132,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
         	@SuppressWarnings("unchecked")
 			HttpResponse<Q> response = (HttpResponse<Q>) JRest.readResponse(con, responseType);
         	con.getInputStream().close();
+        	con.disconnect();
         	if ( response == null ) {
         		return new ResponseEntity<Q>(HttpStatus.NOT_FOUND);
         	} else {
