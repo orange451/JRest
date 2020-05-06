@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class JRest {
 	
@@ -34,6 +36,9 @@ public class JRest {
 	
 	/** Whether the server encountered an error starting **/
 	private boolean error;
+	
+	/** Whether the server is currently initializing **/
+	private boolean initializing;
 	
 	/** Name of the server when a request is made **/
 	private String serverName;
@@ -67,24 +72,47 @@ public class JRest {
 	public static JRest create() {
 		return new JRest();
 	}
+	
+	/** Stop the server */
+	public JRest stop() {
+
+		// Server not started
+		if ( !started ) {
+			System.err.println("Server cannot be stopped as it has not yet been started.");
+			return this;
+		}
+		
+		// Server must exist
+		if ( server == null ) {
+			System.err.println("Server is still starting... Sending flag to shutdown.");
+			started = false;
+			return this;
+		}
+		
+		// Stop
+		this.started = false;
+		return this;
+	}
 
 	/** Start server **/
 	public JRest start() {
 		
 		// Server initializing
 		if ( server != null ) {
-			System.err.println("Server is currently initializing. Please wait");
+			System.err.println("Server is already started on port: " + port);
 			return this;
 		}
 		
-		// Server already started
+		// Server starting
 		if ( started ) {
-			System.err.println("Server is already started on port: " + port);
+			System.err.println("Server is currently initializing. Please wait");
 			return this;
 		}
 		
 		// Setup cookie handler
 		cookieManager = new CookieManager();
+		started = true;
+		initializing = true;
 		
 		// Start new server
 		new Thread(() -> {
@@ -92,50 +120,54 @@ public class JRest {
 				server = new ServerSocket(port);
 				server.setSoTimeout(0);
 				System.out.println("REST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort());
-				started = true;
-				while (true) {
-
-					// Dont burn CPU while waiting for connections
+				
+				ExecutorService service = Executors.newCachedThreadPool();
+				initializing = false;
+				
+				while (started) {
 					try {
+						// Dont burn CPU while waiting for connections
 						Thread.sleep(5);
 						Thread.yield();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-
-					try {
+						
 						// Wait for socket
 						Socket incoming = server.accept();
 
-						// Start listening to it
-						if (incoming != null) {
-							new Thread(() -> {
-								readAndHandleSocket(incoming);
-							}).start();
-						}
+						// Start listening to its data
+						if (incoming != null)
+							service.submit(()->readAndHandleSocket(incoming));
 					} catch (SocketTimeoutException e) {
 						e.printStackTrace();
 					} catch (IOException e) {
 						e.printStackTrace();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
 					}
 				}
+				
+				System.out.println("Shutting down " + this.getServerName());
+				service.shutdown();
 			} catch (IOException e1) {
-				System.out.println("Error making server... " + e1);
+				System.err.println("Error making server... " + e1);
 				e1.printStackTrace();
 				error = true;
+				started = false;
+				initializing = false;
 			} finally {
 				try {
 					server.close();
 				} catch (IOException e) {
+					System.err.println("Error stopping server... " + e);
 					e.printStackTrace();
 				}
 				started = false;
+				initializing = false;
 				server = null;
 			}
 		}).start();
 
 		// Wait for server to turn on
-		while (!started && !error) {
+		while (!error && initializing) {
 			try {
 				Thread.sleep(1);
 			} catch (InterruptedException e) {
@@ -480,6 +512,10 @@ public class JRest {
 	 * @param object   Business logic interface
 	 */
 	public <P, Q> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, Class<P> bodyType, EndPoint<Q,P> object) {
+		if ( this.isErrored() ) {
+			System.err.println("Could not register endpoint. Server failed to start.");
+			return;
+		}
 		if (!endpointMap.containsKey(endpoint))
 			endpointMap.put(endpoint, new HashMap<>());
 
