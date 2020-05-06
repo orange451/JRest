@@ -183,21 +183,16 @@ public class JRest {
 	 */
 	private void readAndHandleSocket(Socket incoming) {
 		try {
-			while (true) {
-				// If it's closed, we cant continue
-				if (incoming.isClosed())
-					break;
-
+			while (!incoming.isClosed()) {
 				// Parse sockets request
 				HttpRequest<?> request = parseRequest(incoming);
-				if (request == null)
+				if (request == null) {
+					Thread.sleep(1); // Dont burn CPU
 					continue;
+				}
 
 				// Run REST endpoint logic
 				onRequest(incoming, request);
-
-				// Dont burn CPU
-				Thread.sleep(1);
 
 				// Close socket when done
 				incoming.close();
@@ -290,8 +285,7 @@ public class JRest {
 	 * Runs when client makes http request to one of our endpoints.
 	 */
 	@SuppressWarnings("unchecked")
-	private <P,Q> void onRequest(Socket socket, HttpRequest<P> request)
-			throws UnsupportedEncodingException, IOException {
+	private <P,Q> void onRequest(Socket socket, HttpRequest<P> request) throws UnsupportedEncodingException, IOException {
 		// Log
 		if (request != null && isLogRequests())
 			System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
@@ -391,10 +385,13 @@ public class JRest {
 
 	private static List<String> readRequestData(InputStream inputStream) throws IOException {
 		long TIMEOUT = System.currentTimeMillis() + 1000;
+		
+		System.out.println("AAA");
 
 		BufferedInputStream bufferedInput = new BufferedInputStream(inputStream);
 		while (bufferedInput.available() == 0) {
 			if (System.currentTimeMillis() > TIMEOUT) {
+				bufferedInput.close();
 				return Arrays.asList();
 			}
 		}
