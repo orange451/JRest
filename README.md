@@ -1,5 +1,7 @@
 # JRest
-Small and lightweight Java Rest Library. **Only has one dependency, Gson (For POJO Serialization)**. It can be used as a webhost, back-end server, or to make requests to already existing REST endpoints. It doesn't use annotations, and can work asynchrounously.
+Small and lightweight Java Rest Library. **Only has one (optional) dependency, Gson (For POJO Serialization)**. It can be used as a webhost, back-end server, or to make requests to already existing REST endpoints. It doesn't use annotations, and can work asynchrounously.
+
+If JRest is ran without Gson dependency, DTO/POJO objects cannot be serialized/deserialized. JSON Objects can still be used though.
 
 # Examples
 Simple GET request:
