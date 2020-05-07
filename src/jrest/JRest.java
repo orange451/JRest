@@ -307,12 +307,7 @@ public class JRest {
 				body = new String();
 
 			// Convert body
-			String writeBody = null;
-			if (body instanceof String) {
-				writeBody = body.toString();
-			} else {
-				writeBody = RestUtil.gson.toJson(body);
-			}
+			String writeBody = RestUtil.convertSoString(body);
 
 			// Write response
 			BufferedOutputStream b = new BufferedOutputStream(socket.getOutputStream());
