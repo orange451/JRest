@@ -29,7 +29,7 @@ public class RestUtil {
 			gson = new GsonBuilder().serializeNulls().create();
 			canUseGson = true;
 		} catch(NoClassDefFoundError e) {
-			System.err.println("Could not locate Gson dependency. Cannot Serialize Java classes. Using Nashorn engine as fallback Map serializer.");
+			System.err.println("Could not locate Gson dependency, will not serialize Java classes. Using Nashorn engine as fallback Map/List serializer.");
 			
 	        ScriptEngineManager sem = new ScriptEngineManager();
 	        engine = sem.getEngineByName("javascript");
