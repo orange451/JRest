@@ -93,8 +93,10 @@ public class RequestEntity<T> extends HttpEntity<T> {
 			con.setRequestMethod(this.getMethod().toString());
 
 			// Hidden headers
-			if ( this.getHeaders().get("Host") == null )
-				this.getHeaders().put("Host", url.getHost());
+			if ( this.getHeaders().get("Host") == null ) {
+				String port = url.getPort() == -1 ? "" : (":" + url.getPort());
+				this.getHeaders().put("Host", url.getHost() + port);
+			}
 			
 			// Cookies!
 			if (getCookies().size() > 0) {
@@ -114,7 +116,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
             // Get usable body
         	String body = null;
         	if ( getBody() != null && !bodyInUrl )
-        		body = getBody().toString();
+        		body = RestUtil.convertSoString(getBody());
         	else
         		body = new String();
         	
