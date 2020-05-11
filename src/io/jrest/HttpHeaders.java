@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 import java.util.HashMap;
 import java.util.Map;

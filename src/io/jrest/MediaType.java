@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 public class MediaType {
 	

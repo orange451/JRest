@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 import java.net.URI;
 import java.util.HashMap;

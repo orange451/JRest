@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 import java.net.HttpCookie;
 import java.util.ArrayList;

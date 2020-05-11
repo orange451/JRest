@@ -5,9 +5,10 @@ import java.net.MalformedURLException;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import jrest.HttpMethod;
-import jrest.RequestEntity;
-import jrest.ResponseEntity;
+
+import io.jrest.HttpMethod;
+import io.jrest.RequestEntity;
+import io.jrest.ResponseEntity;
 
 public class TestClient {
 	

@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 class HttpResponse<T> extends HttpEntity<T> {
 	

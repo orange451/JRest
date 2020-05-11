@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;

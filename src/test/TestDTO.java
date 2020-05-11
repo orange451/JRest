@@ -5,8 +5,8 @@ import java.net.MalformedURLException;
 
 import com.google.gson.JsonObject;
 
-import jrest.HttpMethod;
-import jrest.RequestEntity;
+import io.jrest.HttpMethod;
+import io.jrest.RequestEntity;
 
 public class TestDTO {
 	

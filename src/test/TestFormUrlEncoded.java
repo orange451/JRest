@@ -5,10 +5,10 @@ import java.net.MalformedURLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import jrest.HttpHeaders;
-import jrest.HttpMethod;
-import jrest.MediaType;
-import jrest.RequestEntity;
+import io.jrest.HttpHeaders;
+import io.jrest.HttpMethod;
+import io.jrest.MediaType;
+import io.jrest.RequestEntity;
 
 public class TestFormUrlEncoded {
 	

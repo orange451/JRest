@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import jrest.HttpMethod;
-import jrest.RequestEntity;
+import io.jrest.HttpMethod;
+import io.jrest.RequestEntity;
 
 public class TestCookies {
 	

@@ -3,11 +3,12 @@ package test;
 import java.net.HttpCookie;
 
 import com.google.gson.JsonObject;
-import jrest.HttpMethod;
-import jrest.HttpStatus;
-import jrest.MediaType;
-import jrest.ResponseEntity;
-import jrest.JRest;
+
+import io.jrest.HttpMethod;
+import io.jrest.HttpStatus;
+import io.jrest.JRest;
+import io.jrest.MediaType;
+import io.jrest.ResponseEntity;
 
 public class TestServer {
 	

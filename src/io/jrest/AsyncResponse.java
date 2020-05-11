@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 @FunctionalInterface
 public interface AsyncResponse<Q> {

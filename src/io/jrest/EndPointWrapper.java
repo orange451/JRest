@@ -1,4 +1,4 @@
-package jrest;
+package io.jrest;
 
 class EndPointWrapper<P, Q> {
 	private EndPoint<Q,P> endpoint;
