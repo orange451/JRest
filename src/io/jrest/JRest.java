@@ -114,12 +114,16 @@ public class JRest {
 		started = true;
 		initializing = true;
 		
+		long startTime = System.currentTimeMillis();
+		
 		// Start new server
 		new Thread(() -> {
 			try {
 				server = new ServerSocket(port);
 				server.setSoTimeout(0);
-				System.out.println("REST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort());
+				
+				long elaspedTime = System.currentTimeMillis()-startTime;
+				System.out.println("REST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort() + " " + elaspedTime + " ms");
 				
 				ExecutorService service = Executors.newCachedThreadPool();
 				initializing = false;
