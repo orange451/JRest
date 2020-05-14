@@ -29,6 +29,20 @@ public class TestServer {
 				.start();
 		
 		/**
+		 * 404 page. (Optional to have custom 404 page).
+		 */
+		server.setResponseHandler(HttpStatus.NOT_FOUND, MediaType.TEXT_HTML, (request) -> {
+			return new ResponseEntity<String>(HttpStatus.NOT_FOUND, "<h1>404 Not Found!</h1>");
+		});
+		
+		/**
+		 * Internal Error Page. (Optional to have custom error page).
+		 */
+		server.setResponseHandler(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.TEXT_HTML, (request) -> {
+			return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR, "<h1>An Internal Error Has Occured.</h1>");
+		});
+		
+		/**
 		 * Open in a web browser! http://localhost/
 		 */
 		server.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{

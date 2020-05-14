@@ -30,6 +30,8 @@ public class JRest {
 	
 	/** Internal map to quickly locate endpoints **/
 	private final Map<String, Map<HttpMethod, EndPointWrapper<?,?>>> endpointMap;
+	
+	private final Map<HttpStatus, EndPointWrapper<?,?>> responseHandlerMap;
 
 	/** Whether the server is started **/
 	private boolean started;
@@ -64,6 +66,7 @@ public class JRest {
 	private JRest() {
 		this.port = 80;
 		this.endpointMap = new HashMap<>();
+		this.responseHandlerMap = new HashMap<>();
 		this.serverName = "JRest : Lightweight REST Server";
 		cookieManagerServer.put(this, new HashMap<>());
 	}
@@ -296,11 +299,34 @@ public class JRest {
 
 		// Get matching endpoint
 		EndPointWrapper<P, Q> endpoint = (EndPointWrapper<P, Q>) getEndPoint(request.getURI().getPath(), request.getMethod());
+		MediaType produces = MediaType.TEXT_PLAIN;
+		HttpStatus status = HttpStatus.NOT_FOUND;
+		ResponseEntity<Q> response = null;
+		
+		// Query endpoint
 		if (endpoint != null) {
-			ResponseEntity<Q> response = endpoint.query(request);
+			produces = endpoint.getProduces();
+			response = endpoint.query(request);
 			if (response == null)
 				response = new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 			
+			status = response.getStatus();
+		}
+		
+		// Status Handler override
+		if ( responseHandlerMap.containsKey(status) ) {
+			endpoint = (EndPointWrapper<P, Q>) responseHandlerMap.get(status);
+			if ( endpoint != null ) {
+				produces = endpoint.getProduces();
+				response = endpoint.query(request);
+				if (response == null)
+					response = new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+				
+				status = response.getStatus();
+			}
+		}
+		
+		if ( response != null ) {
 			// Put response cookies into manager
 			for (HttpCookie cookie : response.getCookies()) {
 				cookieManagerServer.get(this).get(socket).getCookieStore().add(null, cookie);
@@ -330,7 +356,7 @@ public class JRest {
 			}
 			
 			b.write(new String("Content-Length: " + writeBody.length() + "\n").getBytes("UTF-8"));
-			b.write(new String("Content-Type: " + endpoint.getProduces() + "\n\n").getBytes("UTF-8"));
+			b.write(new String("Content-Type: " + produces + "\n\n").getBytes("UTF-8"));
 			b.write(new String(writeBody).getBytes("UTF-8"));
 			b.flush();
 			b.close();
@@ -492,6 +518,22 @@ public class JRest {
 	 */
 	public boolean isLogRequests() {
 		return this.logRequests;
+	}
+
+
+	public <P, Q> void setResponseHandler(HttpStatus status, MediaType produces, Class<P> bodyType, EndPoint<Q,P> endpointObject) {
+		if ( this.isErrored() ) {
+			System.err.println("Could not register response handler. Server failed to start.");
+			return;
+		}
+		responseHandlerMap.put(status, new EndPointWrapper<P, Q>(endpointObject, produces, produces, bodyType));
+		System.out.println("Registered Response Handler\t[" + status + "]");
+	}
+
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public <P, Q> void setResponseHandler(HttpStatus status, MediaType produces, EndPoint endpointObject) {
+		setResponseHandler(status, produces, Object.class, endpointObject);
 	}
 
 	/**
