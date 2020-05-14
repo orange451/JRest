@@ -520,7 +520,16 @@ public class JRest {
 		return this.logRequests;
 	}
 
-
+	/**
+	 * Registers a rest response handler to the rest server. This response endpoint serves to
+	 * inject custom responses for a given HttpStatus. For example, adding a response handler
+	 * with status 404 allows for a custom 404 Not Found Page.
+	 * 
+	 * @param status   HTTP Status for the handler
+	 * @param produces Type of media this endpoint will produce
+	 * @param bodyType Type of class we expect to send with our response
+	 * @param endpointObject   Business logic interface
+	 */
 	public <P, Q> void setResponseHandler(HttpStatus status, MediaType produces, Class<P> bodyType, EndPoint<Q,P> endpointObject) {
 		if ( this.isErrored() ) {
 			System.err.println("Could not register response handler. Server failed to start.");
@@ -530,10 +539,31 @@ public class JRest {
 		System.out.println("Registered Response Handler\t[" + status + "]");
 	}
 
-
+	/**
+	 * Registers a rest response handler to the rest server. This response endpoint serves to
+	 * inject custom responses for a given HttpStatus. For example, adding a response handler
+	 * with status 404 allows for a custom 404 Not Found Page.
+	 * 
+	 * @param status   HTTP Status for the handler
+	 * @param produces Type of media this endpoint will produce
+	 * @param endpointObject   Business logic interface
+	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public <P, Q> void setResponseHandler(HttpStatus status, MediaType produces, EndPoint endpointObject) {
 		setResponseHandler(status, produces, Object.class, endpointObject);
+	}
+
+	/**
+	 * Registers a rest response handler to the rest server. This response endpoint serves to
+	 * inject custom responses for a given HttpStatus. For example, adding a response handler
+	 * with status 404 allows for a custom 404 Not Found Page.
+	 * 
+	 * @param status   HTTP Status for the handler
+	 * @param endpointObject   Business logic interface
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public <P, Q> void setResponseHandler(HttpStatus status, EndPoint endpointObject) {
+		setResponseHandler(status, MediaType.TEXT_PLAIN, Object.class, endpointObject);
 	}
 
 	/**
@@ -552,8 +582,9 @@ public class JRest {
 			System.err.println("Could not register endpoint. Server failed to start.");
 			return;
 		}
-		if (!endpointMap.containsKey(endpoint))
+		if (!endpointMap.containsKey(endpoint)) {
 			endpointMap.put(endpoint, new HashMap<>());
+		}
 
 		Map<HttpMethod, EndPointWrapper<?,?>> t = endpointMap.get(endpoint);
 		if (t == null)
