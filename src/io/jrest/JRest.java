@@ -530,13 +530,14 @@ public class JRest {
 	 * @param bodyType Type of class we expect to send with our response
 	 * @param endpointObject   Business logic interface
 	 */
-	public <P, Q> void setResponseHandler(HttpStatus status, MediaType produces, Class<P> bodyType, EndPoint<Q,P> endpointObject) {
+	public <P, Q> JRest setResponseHandler(HttpStatus status, MediaType produces, Class<P> bodyType, EndPoint<Q,P> endpointObject) {
 		if ( this.isErrored() ) {
 			System.err.println("Could not register response handler. Server failed to start.");
-			return;
+			return this;
 		}
 		responseHandlerMap.put(status, new EndPointWrapper<P, Q>(endpointObject, produces, produces, bodyType));
 		System.out.println("Registered Response Handler\t[" + status + "]");
+		return this;
 	}
 
 	/**
@@ -549,8 +550,8 @@ public class JRest {
 	 * @param endpointObject   Business logic interface
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public <P, Q> void setResponseHandler(HttpStatus status, MediaType produces, EndPoint endpointObject) {
-		setResponseHandler(status, produces, Object.class, endpointObject);
+	public <P, Q> JRest setResponseHandler(HttpStatus status, MediaType produces, EndPoint endpointObject) {
+		return setResponseHandler(status, produces, Object.class, endpointObject);
 	}
 
 	/**
@@ -562,8 +563,8 @@ public class JRest {
 	 * @param endpointObject   Business logic interface
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public <P, Q> void setResponseHandler(HttpStatus status, EndPoint endpointObject) {
-		setResponseHandler(status, MediaType.TEXT_PLAIN, Object.class, endpointObject);
+	public <P, Q> JRest setResponseHandler(HttpStatus status, EndPoint endpointObject) {
+		return setResponseHandler(status, MediaType.TEXT_PLAIN, Object.class, endpointObject);
 	}
 
 	/**
@@ -577,10 +578,14 @@ public class JRest {
 	 * @param bodyType Type of class we expect to send with our response
 	 * @param object   Business logic interface
 	 */
-	public <P, Q> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, Class<P> bodyType, EndPoint<Q,P> object) {
+	public <P, Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, Class<P> bodyType, EndPoint<Q,P> object) {
 		if ( this.isErrored() ) {
 			System.err.println("Could not register endpoint. Server failed to start.");
-			return;
+			return this;
+		}
+		if ( !this.isStarted() ) {
+			System.err.println("Could not register endpoint. Server is not started.");
+			return this;
 		}
 		if (!endpointMap.containsKey(endpoint)) {
 			endpointMap.put(endpoint, new HashMap<>());
@@ -588,10 +593,11 @@ public class JRest {
 
 		Map<HttpMethod, EndPointWrapper<?,?>> t = endpointMap.get(endpoint);
 		if (t == null)
-			return;
+			return this;
 
 		t.put(method, new EndPointWrapper<P, Q>(object, consumes, produces, bodyType));
 		System.out.println("Registered endpoint\t[" + method + "]\t " + endpoint);
+		return this;
 	}
 
 	/**
@@ -604,8 +610,8 @@ public class JRest {
 	 * @param bodyType Type of class we expect to send with our response
 	 * @param object   Business logic interface
 	 */
-	public <P, Q> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<P> bodyType, EndPoint<Q,P> object) {
-		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, bodyType, object);
+	public <P, Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<P> bodyType, EndPoint<Q,P> object) {
+		return addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, bodyType, object);
 	}
 
 	/**
@@ -618,8 +624,8 @@ public class JRest {
 	 * @param bodyType Type of class we expect to send with our response
 	 * @param object   Business logic interface
 	 */
-	public <P, Q> void addEndpoint(HttpMethod method, String endpoint, Class<P> bodyType, EndPoint<Q,P> object) {
-		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, bodyType, object);
+	public <P, Q> JRest addEndpoint(HttpMethod method, String endpoint, Class<P> bodyType, EndPoint<Q,P> object) {
+		return addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, bodyType, object);
 	}
 
 	/**
@@ -633,8 +639,8 @@ public class JRest {
 	 * @param object   Business logic interface
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public <P,Q> void addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, EndPoint object) {
-		addEndpoint(method, endpoint, consumes, produces, Object.class, object);
+	public <P,Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, EndPoint object) {
+		return addEndpoint(method, endpoint, consumes, produces, Object.class, object);
 	}
 
 	/**
@@ -646,8 +652,8 @@ public class JRest {
 	 * @param consumes Type of media this endpoint will consume and produce
 	 * @param object   Business logic interface
 	 */
-	public <P,Q> void addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, EndPoint<Q,P> object) {
-		addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, object);
+	public <P,Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, EndPoint<Q,P> object) {
+		return addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, object);
 	}
 
 	/**
@@ -659,8 +665,8 @@ public class JRest {
 	 * @param endpoint Endpoint API URL (Start with /)
 	 * @param object   Business logic interface
 	 */
-	public <P,Q> void addEndpoint(HttpMethod method, String endpoint, EndPoint<Q,P> object) {
-		addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, object);
+	public <P,Q> JRest addEndpoint(HttpMethod method, String endpoint, EndPoint<Q,P> object) {
+		return addEndpoint(method, endpoint, MediaType.TEXT_PLAIN, object);
 	}
 
 	/**
@@ -670,7 +676,7 @@ public class JRest {
 	 * @param endpoint Endpoint API URL (Start with /)
 	 * @param object   Business logic interface
 	 */
-	public <P,Q> void addEndpoint(String endpoint, EndPoint<Q,P> object) {
-		addEndpoint(HttpMethod.GET, endpoint, object);
+	public <P,Q> JRest addEndpoint(String endpoint, EndPoint<Q,P> object) {
+		return addEndpoint(HttpMethod.GET, endpoint, object);
 	}
 }
