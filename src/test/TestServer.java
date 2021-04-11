@@ -4,6 +4,7 @@ import java.net.HttpCookie;
 
 import com.google.gson.JsonObject;
 
+import io.jrest.EndpointBuilder;
 import io.jrest.HttpMethod;
 import io.jrest.HttpStatus;
 import io.jrest.JRest;
@@ -127,5 +128,18 @@ public class TestServer {
 			
 			return new ResponseEntity<JsonObject>(HttpStatus.OK, response);
 		});
+		
+		/**
+		 * Endpoint Builder
+		 */
+		server.addEndpoint(new EndpointBuilder<String, JsonObject>()
+			.setEndpoint("/TestBuilder")
+			.setProduces(MediaType.APPLICATION_JSON)
+			.setRequest((request)->{
+				JsonObject response = new JsonObject();
+				response.addProperty("test", "Hello World");
+				return new ResponseEntity<JsonObject>(HttpStatus.OK, response);
+			})
+		);
 	}
 }

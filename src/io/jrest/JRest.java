@@ -566,6 +566,21 @@ public class JRest {
 	public <P, Q> JRest setResponseHandler(HttpStatus status, EndPoint endpointObject) {
 		return setResponseHandler(status, MediaType.TEXT_PLAIN, Object.class, endpointObject);
 	}
+	
+	/**
+	 * Registers a rest endpoint to the rest server. This endpoint acts as an end of
+	 * a communication channel from which APIs can interact.
+	 * @param EndpointBuilder
+	 * @return
+	 */
+	public <P, Q> JRest addEndpoint(EndpointBuilder<P, Q> builder) {
+		if ( builder.getRequest() == null ) {
+			System.err.println("Could not register endpoint. Please Set Request Callback.");
+			return this;
+		}
+		
+		return this.addEndpoint(builder.getHttpMethod(), builder.getEndpoint(), builder.getConsumes(), builder.getProduces(), builder.getReceiveType(), builder.getReturnType(), builder.getRequest());
+	}
 
 	/**
 	 * Registers a rest endpoint to the rest server. This endpoint acts as an end of
