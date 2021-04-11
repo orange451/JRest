@@ -726,7 +726,7 @@ public class JRest {
 	 * @param object   Business logic interface
 	 */
 	public <P,Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<P> requestType, Class<Q> returnType, EndPoint<Q,P> object) {
-		return this.addEndpoint(HttpMethod.GET, endpoint, produceAndConsume, produceAndConsume, requestType, returnType, object);
+		return this.addEndpoint(method, endpoint, produceAndConsume, produceAndConsume, requestType, returnType, object);
 	}
 	
 	/**
