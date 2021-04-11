@@ -116,5 +116,16 @@ public class TestServer {
 			response.getCookies().add(new HttpCookie("TestCookie", "Message123"));
 			return response;
 		});
+		
+		/**
+		 * Mixed types test
+		 */
+		server.addEndpoint(HttpMethod.GET, "/MixedTypes", String.class, JsonObject.class, (request)->{
+			String text = request.getBody();
+			JsonObject response = new JsonObject();
+			response.addProperty("TEST", text);
+			
+			return new ResponseEntity<JsonObject>(HttpStatus.OK, response);
+		});
 	}
 }

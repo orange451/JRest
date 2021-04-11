@@ -575,10 +575,11 @@ public class JRest {
 	 * @param endpoint Endpoint API URL (Start with /)
 	 * @param consumes Type of media this endpoint will consume
 	 * @param produces Type of media this endpoint will produce
-	 * @param bodyType Type of class we expect to send with our response
+	 * @param bodyType Type of class we expect to receive with our response
+	 * @param returnType Type of class we expect to send with our response
 	 * @param object   Business logic interface
 	 */
-	public <P, Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, Class<P> bodyType, EndPoint<Q,P> object) {
+	public <P, Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, Class<P> bodyType, Class<Q> returnType, EndPoint<Q,P> object) {
 		if ( this.isErrored() ) {
 			System.err.println("Could not register endpoint. Server failed to start.");
 			return this;
@@ -598,6 +599,25 @@ public class JRest {
 		t.put(method, new EndPointWrapper<P, Q>(object, consumes, produces, bodyType));
 		System.out.println("Registered endpoint\t[" + method + "]\t " + endpoint);
 		return this;
+	}
+
+	/**
+	 * Registers a rest endpoint to the rest server. This endpoint acts as an end of
+	 * a communication channel from which APIs can interact.
+	 * @param <T>
+	 * 
+	 * @param method   HTTP Method required to communicate with this endpoint.
+	 * @param endpoint Endpoint API URL (Start with /)
+	 * @param consumes Type of media this endpoint will consume
+	 * @param produces Type of media this endpoint will produce
+	 * @param bodyType Type of class we expect to receive/send with our response
+	 * @param object   Business logic interface
+	 */
+	@SuppressWarnings("unchecked")
+	public <P, Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, Class<P> bodyType, EndPoint<Q,P> object) {
+		Class<Q> returnType = (Class<Q>) bodyType;
+		JRest ret = this.addEndpoint(method, endpoint, consumes, produces, bodyType, returnType, object);
+		return ret;
 	}
 
 	/**
@@ -678,5 +698,52 @@ public class JRest {
 	 */
 	public <P,Q> JRest addEndpoint(String endpoint, EndPoint<Q,P> object) {
 		return addEndpoint(HttpMethod.GET, endpoint, object);
+	}
+	
+	/**
+	 * Registers a mixed-rest endpoint to the rest server. This endpoint acts as an end of
+	 * a communication channel from which APIs can interact.
+	 * <br>
+	 * A mixed-rest endpoint is an endpoint that returns data in a different format than it was received.
+	 * 
+	 * @param method   HTTP Method required to communicate with this endpoint.
+	 * @param endpoint Endpoint API URL (Start with /)
+	 * @param object   Business logic interface
+	 */
+	public <P,Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType produceAndConsume, Class<P> requestType, Class<Q> returnType, EndPoint<Q,P> object) {
+		return this.addEndpoint(HttpMethod.GET, endpoint, produceAndConsume, produceAndConsume, requestType, returnType, object);
+	}
+	
+	/**
+	 * Registers a mixed-rest endpoint to the rest server. This endpoint acts as an end of
+	 * a communication channel from which APIs can interact. MediaType will be {@link MediaType#APPLICATION_JSON}
+	 * unless ClassType is String, in which case it will be {@link MediaType#TEXT_PLAIN}
+	 * <br>
+	 * A mixed-rest endpoint is an endpoint that returns data in a different format than it was received.
+	 * 
+	 * @param method   HTTP Method required to communicate with this endpoint.
+	 * @param endpoint Endpoint API URL (Start with /)
+	 * @param object   Business logic interface
+	 */
+	public <P,Q> JRest addEndpoint(HttpMethod method, String endpoint, Class<P> requestType, Class<Q> returnType, EndPoint<Q,P> object) {
+		MediaType reqType = requestType == String.class ? MediaType.TEXT_PLAIN : MediaType.APPLICATION_JSON;
+		MediaType retType = returnType == String.class ? MediaType.TEXT_PLAIN : MediaType.APPLICATION_JSON;
+		return this.addEndpoint(HttpMethod.GET, endpoint, reqType, retType, requestType, returnType, object);
+	}
+	
+	/**
+	 * Registers a mixed-rest endpoint to the rest server. This endpoint acts as an end of
+	 * a communication channel from which APIs can interact. Uses GET request.
+	 * MediaType will be {@link MediaType#APPLICATION_JSON} unless ClassType is String,
+	 * in which case it will be {@link MediaType#TEXT_PLAIN}
+	 * <br>
+	 * A mixed-rest endpoint is an endpoint that returns data in a different format than it was received.
+	 * 
+	 * @param method   HTTP Method required to communicate with this endpoint.
+	 * @param endpoint Endpoint API URL (Start with /)
+	 * @param object   Business logic interface
+	 */
+	public <P,Q> JRest addEndpoint(String endpoint, Class<P> requestType, Class<Q> returnType, EndPoint<Q,P> object) {
+		return this.addEndpoint(HttpMethod.GET, endpoint, requestType, returnType, object);
 	}
 }
