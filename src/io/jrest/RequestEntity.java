@@ -66,7 +66,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		}).start();
 	}
 	
-	public ResponseEntity<T> exchange(String url, Class<T> responseType) throws MalformedURLException,IOException {
+	public <Q> ResponseEntity<Q> exchange(String url, Class<Q> responseType) throws MalformedURLException,IOException {
 		return this.exchange(new URL(url), responseType);
 	}
 	
