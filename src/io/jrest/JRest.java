@@ -382,7 +382,7 @@ public class JRest {
 	protected static <T> HttpResponse<T> readResponse(HttpURLConnection connection, T type) throws IOException {
 		// Read body
 		byte[] data = RestUtil.readAll(connection.getInputStream());
-		String body = new String(data, Charset.forName("UTF-8"));
+		String body = new String(data == null ? new byte[0] : data, Charset.forName("UTF-8"));
 
 		// Create response headers
 		HttpHeaders headers = new HttpHeaders();
