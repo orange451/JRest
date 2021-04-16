@@ -53,7 +53,7 @@ public class EndpointBuilder<P,Q> {
 		return this;
 	}
 	
-	public EndpointBuilder<P,Q> setRequest(EndPoint<Q, P> callback) {
+	public EndpointBuilder<P,Q> setOnRequest(EndPoint<Q, P> callback) {
 		this.callback = callback;
 		return this;
 	}

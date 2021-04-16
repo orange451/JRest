@@ -199,7 +199,7 @@ public class JRest {
 				}
 
 				// Run REST endpoint logic
-				onRequest(incoming, request);
+				handleRequest(incoming, request);
 
 				// Close socket when done
 				incoming.close();
@@ -292,7 +292,7 @@ public class JRest {
 	 * Runs when client makes http request to one of our endpoints.
 	 */
 	@SuppressWarnings("unchecked")
-	private <P,Q> void onRequest(Socket socket, HttpRequest<P> request) throws UnsupportedEncodingException, IOException {
+	private <P,Q> void handleRequest(Socket socket, HttpRequest<P> request) throws UnsupportedEncodingException, IOException {
 		// Log
 		if (request != null && isLogRequests())
 			System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);

@@ -135,7 +135,7 @@ public class TestServer {
 		server.addEndpoint(new EndpointBuilder<String, JsonObject>()
 			.setEndpoint("/TestBuilder")
 			.setProduces(MediaType.APPLICATION_JSON)
-			.setRequest((request)->{
+			.setOnRequest((request)->{
 				JsonObject response = new JsonObject();
 				response.addProperty("test", "Hello World");
 				return new ResponseEntity<JsonObject>(HttpStatus.OK, response);
