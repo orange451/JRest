@@ -38,24 +38,44 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		this.cookies = new ArrayList<HttpCookie>(JRest.cookieManager.getCookieStore().getCookies());
 	}
 	
+	/**
+	 * HTTP Method used to invoke a HTTP Request
+	 */
 	public HttpMethod getMethod() {
 		return this.method;
 	}
 	
+	/**
+	 * Queries a specified endpoint asynchronously.
+	 * @throws MalformedURLException
+	 */
 	@SuppressWarnings("unchecked")
 	public <P, Q> void exchangeAsync(String url, AsyncResponse<Q> response) throws MalformedURLException {
 		this.exchangeAsync(url, (Class<Q>)Object.class, response);
 	}
+
 	
+	/**
+	 * Queries a specified endpoint asynchronously.
+	 * @throws MalformedURLException
+	 */
 	public <P, Q> void exchangeAsync(String url, Class<Q> responseType, AsyncResponse<Q> response) throws MalformedURLException {
 		this.exchangeAsync(new URL(url), responseType, response);
 	}
+
 	
+	/**
+	 * Queries a specified endpoint asynchronously.
+	 */
 	@SuppressWarnings("unchecked")
 	public <P, Q> void exchangeAsync(URL url, AsyncResponse<Q> response) {
 		this.exchangeAsync(url, (Class<Q>)Object.class, response);
 	}
+
 	
+	/**
+	 * Queries a specified endpoint asynchronously.
+	 */
 	public <P, Q> void exchangeAsync(URL url, Class<Q> responseType, AsyncResponse<Q> response) {
 		new Thread(()->{
 			try {
@@ -66,10 +86,19 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		}).start();
 	}
 	
+	/**
+	 * Queries a specified endpoint. Returns a response entity object describing the result.
+	 * @throws MalformedURLException
+	 * @throws IOException
+	 */
 	public <Q> ResponseEntity<Q> exchange(String url, Class<Q> responseType) throws MalformedURLException,IOException {
 		return this.exchange(new URL(url), responseType);
 	}
-	
+
+	/**
+	 * Queries a specified endpoint. Returns a response entity object describing the result.
+	 * @throws IOException
+	 */
 	public <P, Q> ResponseEntity<Q> exchange(URL url, Class<Q> responseType) throws IOException {
 		// Connect to endpoint
 		try {

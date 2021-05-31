@@ -17,18 +17,30 @@ public class HttpEntity<T> {
 		this.cookies = new ArrayList<>();
 	}
 	
+	/**
+	 * Data that represents the body of this http entity.
+	 */
 	public T getBody() {
 		return this.body;
 	}
 	
+	/**
+	 * HTTP Headers object.
+	 */
 	public HttpHeaders getHeaders() {
 		return this.headers;
 	}
 	
+	/**
+	 * HTTP Cookies attached to this entity.
+	 */
 	public List<HttpCookie> getCookies() {
 		return this.cookies;
 	}
 	
+	/**
+	 * Search for cookie matching a given name attached to this HTTP entity.
+	 */
 	public HttpCookie getCookie(String key) {
 		if ( cookies == null || key == null )
 			return null;
