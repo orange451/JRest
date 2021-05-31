@@ -149,3 +149,9 @@ server.addEndpoint(HttpMethod.GET, "/", MediaType.TEXT_HTML, (request)->{
 });
 ```
 ![testImage](https://i.imgur.com/jrYyeFv.png)
+
+Statistics:
+- JRest library classes package to less than 50KB in filesize
+- JRest servers can boot in less than 50 ms
+- Does not inherently require dependencies outside of the JDK/JRE
+- Average response time of "Hello World" get request is 3-4 ms (localhost).
