@@ -126,7 +126,7 @@ public class JRest {
 				server.setSoTimeout(0);
 				
 				long elaspedTime = System.currentTimeMillis()-startTime;
-				System.out.println("REST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort() + " " + elaspedTime + " ms");
+				System.out.println("JREST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort() + " " + elaspedTime + " ms");
 				
 				ExecutorService service = Executors.newCachedThreadPool();
 				initializing = false;
@@ -134,7 +134,6 @@ public class JRest {
 				while (started) {
 					try {
 						// Dont burn CPU while waiting for connections
-						Thread.sleep(5);
 						Thread.yield();
 						
 						// Wait for socket
@@ -146,8 +145,6 @@ public class JRest {
 					} catch (SocketTimeoutException e) {
 						e.printStackTrace();
 					} catch (IOException e) {
-						e.printStackTrace();
-					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 				}
