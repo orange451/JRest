@@ -350,7 +350,8 @@ public class JRest {
 				List<String> cookies = new ArrayList<>();
 				for (HttpCookie cookie : cookiesList)
 					cookies.add(cookie.toString());
-				b.write(new String("Cookie: " + String.join(";", cookies) + "\n").getBytes("UTF-8"));
+				String cookieHeader = new String("Set-Cookie: " + String.join(";", cookies) + "\n");
+				b.write(cookieHeader.getBytes("UTF-8"));
 			}
 			
 			b.write(new String("Content-Length: " + writeBody.length() + "\n").getBytes("UTF-8"));
