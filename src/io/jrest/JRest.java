@@ -57,6 +57,9 @@ public class JRest {
 	/** Server use of cookies **/
 	private static Map<JRest, Map<Socket, CookieManager>> cookieManagerServer;
 	
+	/** Logger used for output **/
+	private Logger logger;
+	
 	static {
 		cookieManagerServer = new HashMap<>();
 		cookieManager = new CookieManager();
@@ -65,6 +68,7 @@ public class JRest {
 	/** Use {@link JRest#create()} to create a new JRest instance **/
 	private JRest() {
 		this.port = 80;
+		this.logger = new Logger();
 		this.endpointMap = new HashMap<>();
 		this.responseHandlerMap = new HashMap<>();
 		this.serverName = "JRest : Lightweight REST Server";
@@ -81,13 +85,13 @@ public class JRest {
 
 		// Server not started
 		if ( !started ) {
-			System.err.println("Server cannot be stopped as it has not yet been started.");
+			this.getLogger().warn("Server cannot be stopped as it has not yet been started.");
 			return this;
 		}
 		
 		// Server must exist
 		if ( server == null ) {
-			System.err.println("Server is still starting... Sending flag to shutdown.");
+			this.getLogger().warn("Server is still starting... Sending flag to shutdown.");
 			started = false;
 			return this;
 		}
@@ -102,13 +106,13 @@ public class JRest {
 		
 		// Server initializing
 		if ( server != null ) {
-			System.err.println("Server is already started on port: " + port);
+			this.getLogger().error("Server is already started on port: " + port);
 			return this;
 		}
 		
 		// Server starting
 		if ( started ) {
-			System.err.println("Server is currently initializing. Please wait");
+			this.getLogger().warn("Server is currently initializing. Please wait");
 			return this;
 		}
 		
@@ -126,7 +130,7 @@ public class JRest {
 				server.setSoTimeout(0);
 				
 				long elaspedTime = System.currentTimeMillis()-startTime;
-				System.out.println("JREST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort() + " " + elaspedTime + " ms");
+				this.getLogger().trace("JREST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort() + " " + elaspedTime + " ms");
 				
 				ExecutorService service = Executors.newCachedThreadPool();
 				initializing = false;
@@ -149,10 +153,10 @@ public class JRest {
 					}
 				}
 				
-				System.out.println("Shutting down " + this.getServerName());
+				this.getLogger().trace("Shutting down " + this.getServerName());
 				service.shutdown();
 			} catch (IOException e1) {
-				System.err.println("Error making server... " + e1);
+				this.getLogger().error("Error making server... " + e1);
 				e1.printStackTrace();
 				error = true;
 				started = false;
@@ -161,7 +165,7 @@ public class JRest {
 				try {
 					server.close();
 				} catch (IOException e) {
-					System.err.println("Error stopping server... " + e);
+					this.getLogger().error("Error stopping server... " + e);
 					e.printStackTrace();
 				}
 				started = false;
@@ -292,7 +296,7 @@ public class JRest {
 	private <P,Q> void handleRequest(Socket socket, HttpRequest<P> request) throws UnsupportedEncodingException, IOException {
 		// Log
 		if (request != null && isLogRequests())
-			System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
+			this.getLogger().trace("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
 
 		// Get matching endpoint
 		EndPointWrapper<P, Q> endpoint = (EndPointWrapper<P, Q>) getEndPoint(request.getURI().getPath(), request.getMethod());
@@ -451,6 +455,14 @@ public class JRest {
 
 		return map.get(method);
 	}
+	
+	/**
+	 * Get the logger object used to log data.
+	 * @return
+	 */
+	public Logger getLogger() {
+		return this.logger;
+	}
 
 	/**
 	 * Returns whether the rest server has finished initializing.
@@ -494,7 +506,7 @@ public class JRest {
 	 */
 	public JRest setPort(int port) {
 		if ( started || server != null ) {
-			System.err.println("Port cannot be specified on a server that is starting or has been started.");
+			this.getLogger().error("Port cannot be specified on a server that is starting or has been started.");
 			return this;
 		}
 		
@@ -529,11 +541,11 @@ public class JRest {
 	 */
 	public <P, Q> JRest setResponseHandler(HttpStatus status, MediaType produces, Class<P> bodyType, EndPoint<Q,P> endpointObject) {
 		if ( this.isErrored() ) {
-			System.err.println("Could not register response handler. Server failed to start.");
+			this.getLogger().error("Could not register response handler. Server failed to start.");
 			return this;
 		}
 		responseHandlerMap.put(status, new EndPointWrapper<P, Q>(endpointObject, produces, produces, bodyType));
-		System.out.println("Registered Response Handler\t[" + status + "]");
+		this.getLogger().debug("Registered Response Handler\t[" + status + "]");
 		return this;
 	}
 
@@ -563,21 +575,6 @@ public class JRest {
 	public <P, Q> JRest setResponseHandler(HttpStatus status, EndPoint endpointObject) {
 		return setResponseHandler(status, MediaType.TEXT_PLAIN, Object.class, endpointObject);
 	}
-	
-	/**
-	 * Registers a rest endpoint to the rest server. This endpoint acts as an end of
-	 * a communication channel from which APIs can interact.
-	 * @param EndpointBuilder
-	 * @return
-	 */
-	public <P, Q> JRest addEndpoint(EndpointBuilder<P, Q> builder) {
-		if ( builder.getRequest() == null ) {
-			System.err.println("Could not register endpoint. Please Set Request Callback.");
-			return this;
-		}
-		
-		return this.addEndpoint(builder.getHttpMethod(), builder.getEndpoint(), builder.getConsumes(), builder.getProduces(), builder.getReceiveType(), builder.getReturnType(), builder.getRequest());
-	}
 
 	/**
 	 * Registers a rest endpoint to the rest server. This endpoint acts as an end of
@@ -593,11 +590,11 @@ public class JRest {
 	 */
 	public <P, Q> JRest addEndpoint(HttpMethod method, String endpoint, MediaType consumes, MediaType produces, Class<P> bodyType, Class<Q> returnType, EndPoint<Q,P> object) {
 		if ( this.isErrored() ) {
-			System.err.println("Could not register endpoint. Server failed to start.");
+			this.getLogger().error("Could not register endpoint. Server failed to start.");
 			return this;
 		}
 		if ( !this.isStarted() ) {
-			System.err.println("Could not register endpoint. Server is not started.");
+			this.getLogger().error("Could not register endpoint. Server is not started.");
 			return this;
 		}
 		if (!endpointMap.containsKey(endpoint)) {
@@ -609,7 +606,7 @@ public class JRest {
 			return this;
 
 		t.put(method, new EndPointWrapper<P, Q>(object, consumes, produces, bodyType));
-		System.out.println("Registered endpoint\t[" + method + "]\t " + endpoint);
+		this.getLogger().debug("Registered endpoint\t[" + method + "]\t " + endpoint);
 		return this;
 	}
 
@@ -757,5 +754,20 @@ public class JRest {
 	 */
 	public <P,Q> JRest addEndpoint(String endpoint, Class<P> requestType, Class<Q> returnType, EndPoint<Q,P> object) {
 		return this.addEndpoint(HttpMethod.GET, endpoint, requestType, returnType, object);
+	}
+	
+	/**
+	 * Registers a rest endpoint to the rest server. This endpoint acts as an end of
+	 * a communication channel from which APIs can interact.
+	 * @param EndpointBuilder
+	 * @return
+	 */
+	public <P, Q> JRest addEndpoint(EndpointBuilder<P, Q> builder) {
+		if ( builder.getRequest() == null ) {
+			this.getLogger().error("Could not register endpoint. Please Set Request Callback.");
+			return this;
+		}
+		
+		return this.addEndpoint(builder.getHttpMethod(), builder.getEndpoint(), builder.getConsumes(), builder.getProduces(), builder.getReceiveType(), builder.getReturnType(), builder.getRequest());
 	}
 }
