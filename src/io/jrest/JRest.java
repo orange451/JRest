@@ -1,22 +1,17 @@
 package io.jrest;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.CookieManager;
 import java.net.HttpCookie;
-import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,16 +115,40 @@ public class JRest {
 		started = true;
 		initializing = true;
 		
-		long startTime = System.currentTimeMillis();
-		
 		// Start new server
-		new Thread(() -> {
+		new JRestServer().start();
+
+		// Wait for server to turn on
+		while (!error && initializing) {
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				this.getLogger().error(e);
+			}
+		}
+		
+		return this;
+	}
+
+	private EndPointWrapper<?, ?> getEndPoint(String endpoint, HttpMethod method) {
+		Map<HttpMethod, EndPointWrapper<?,?>> map = endpointMap.get(endpoint);
+		if (map == null)
+			return null;
+
+		return map.get(method);
+	}
+	
+	class JRestServer extends Thread implements Runnable {
+		private final JRest jrestInstance = JRest.this;
+		private final long startTime = System.currentTimeMillis();
+		
+		public void run() {
 			try {
 				server = new ServerSocket(port);
 				server.setSoTimeout(0);
 				
 				long elaspedTime = System.currentTimeMillis()-startTime;
-				this.getLogger().trace("JREST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort() + " " + elaspedTime + " ms");
+				jrestInstance.getLogger().trace("JREST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort() + " " + elaspedTime + " ms");
 				
 				ExecutorService service = Executors.newCachedThreadPool();
 				initializing = false;
@@ -146,16 +165,16 @@ public class JRest {
 						if (incoming != null)
 							service.submit(()->readAndHandleSocket(incoming));
 					} catch (SocketTimeoutException e) {
-						this.getLogger().error(e);
+						jrestInstance.getLogger().error(e);
 					} catch (IOException e) {
-						this.getLogger().error(e);
+						jrestInstance.getLogger().error(e);
 					}
 				}
 				
-				this.getLogger().trace("Shutting down " + this.getServerName());
+				jrestInstance.getLogger().trace("Shutting down " + jrestInstance.getServerName());
 				service.shutdown();
 			} catch (IOException e1) {
-				this.getLogger().error("Error making server... ", e1);
+				jrestInstance.getLogger().error("Error making server... ", e1);
 				error = true;
 				started = false;
 				initializing = false;
@@ -163,158 +182,134 @@ public class JRest {
 				try {
 					server.close();
 				} catch (IOException e) {
-					this.getLogger().error("Error stopping server... ", e);
+					jrestInstance.getLogger().error("Error stopping server... ", e);
 				}
 				started = false;
 				initializing = false;
 				server = null;
 			}
-		}).start();
-
-		// Wait for server to turn on
-		while (!error && initializing) {
+		}
+		
+		/**
+		 * Reads and handles an incoming socket connection
+		 */
+		private void readAndHandleSocket(Socket incoming) {
 			try {
-				Thread.sleep(1);
-			} catch (InterruptedException e) {
-				this.getLogger().error(e);
-			}
-		}
-		
-		return this;
-	}
+				while (!incoming.isClosed()) {
+					// Parse sockets request
+					HttpRequest<?> request = parseRequest(incoming);
+					if (request == null) {
+						Thread.sleep(1); // Dont burn CPU
+						continue;
+					}
 
-	/**
-	 * Reads and handles an incoming socket connection
-	 */
-	private void readAndHandleSocket(Socket incoming) {
-		try {
-			while (!incoming.isClosed()) {
-				// Parse sockets request
-				HttpRequest<?> request = parseRequest(incoming);
-				if (request == null) {
-					Thread.sleep(1); // Dont burn CPU
-					continue;
+					// Run REST endpoint logic
+					handleRequest(incoming, request);
+
+					// Close socket when done
+					incoming.close();
 				}
-
-				// Run REST endpoint logic
-				handleRequest(incoming, request);
-
-				// Close socket when done
-				incoming.close();
-			}
-		} catch (Exception e) {
-			this.getLogger().error(e);
-		}
-	}
-
-	/**
-	 * Gets HttpRequest from socket connection
-	 */
-	private <T> HttpRequest<Object> parseRequest(Socket incoming) throws IOException {
-		// Get incoming info
-		String address = incoming.getInetAddress().getHostAddress();
-		int port = incoming.getPort();
-		InputStream inputStream = incoming.getInputStream();
-		
-		// Parse input into strings
-		List<String> headerData = readRequestData(inputStream);
-		if (headerData == null || headerData.size() == 0)
-			return null;
-		Object body = headerData.remove(headerData.size() - 1);
-
-		// Must have 2 strings
-		if (headerData.size() < 2)
-			return null;
-
-		// Get some header info
-		String[] t1 = headerData.get(0).split(" ");
-		HttpMethod method = HttpMethod.valueOf(t1[0]);
-		String apiString = t1[1];
-		String[] apisplit = apiString.split("\\?", 2);
-		String api = apisplit[0];
-		Map<String, String> urlparams = null;
-		if ( apisplit.length > 1 )
-			urlparams = convertParams(apisplit[1]);
-
-		// Create headers
-		HttpHeaders headers = new HttpHeaders();
-		for (String string : headerData) {
-			String[] split = string.split(":", 2);
-			if (split.length != 2)
-				continue;
-			String key = split[0].trim();
-			String value = split[1].trim();
-
-			headers.put(key, value);
-		}
-		
-		// Setup cookies
-		CookieManager cookieManager = cookieManagerServer.get(this).get(incoming);
-		if (cookieManager == null)
-			cookieManagerServer.get(this).put(incoming, cookieManager = new CookieManager());
-		
-		// Read in cookies
-		String cookiesHeader = headers.get("Cookie");
-		if (cookiesHeader != null) {
-			String[] cookies = cookiesHeader.split(";");
-			for (String cookie : cookies) {
-				cookieManager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
+			} catch (Exception e) {
+				jrestInstance.getLogger().error(e);
 			}
 		}
 
-		// Create request object
-		String host = address.replace("0:0:0:0:0:0:0:1", "127.0.0.1");
-		URI uri = URI.create("http://" + host + ":" + port + api);
-		EndPointWrapper<?, ?> endpoint = getEndPoint(uri.getPath(), method);
-		if (endpoint != null) {
-			if ( endpoint.getConsumes().equals(MediaType.APPLICATION_FORM_URLENCODED) ) {
-				urlparams = convertParams(body.toString());
-				body = null;
-			} else {
-				body = RestUtil.convertObject(body.toString(), endpoint.getBodyType());
-			}
-		}
-		HttpRequest<Object> request = new HttpRequest<>(method, headers, body);
-		request.uri = uri;
-		request.urlParams = urlparams;
-		if (cookieManagerServer.get(this).get(incoming) != null)
-			request.cookies = new ArrayList<>(cookieManagerServer.get(this).get(incoming).getCookieStore().getCookies());
-		else 
-			request.cookies = new ArrayList<>();
-
-		// Return
-		return request;
-	}
-
-	/**
-	 * Runs when client makes http request to one of our endpoints.
-	 */
-	@SuppressWarnings("unchecked")
-	private <P,Q> void handleRequest(Socket socket, HttpRequest<P> request) throws UnsupportedEncodingException, IOException {
-		// Log
-		if (request != null)
-			this.getLogger().trace("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
-
-		// Get matching endpoint
-		EndPointWrapper<P, Q> endpoint = (EndPointWrapper<P, Q>) getEndPoint(request.getURI().getPath(), request.getMethod());
-		MediaType produces = MediaType.TEXT_PLAIN;
-		HttpStatus status = HttpStatus.NOT_FOUND;
-		ResponseEntity<Q> response = null;
-		
-		// Query endpoint
-		if (endpoint != null) {
-			produces = endpoint.getProduces();
-			response = endpoint.query(request);
-			if (response == null)
-				response = new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+		/**
+		 * Gets HttpRequest from socket connection
+		 */
+		private <T> HttpRequest<Object> parseRequest(Socket incoming) throws IOException {
+			// Get incoming info
+			String address = incoming.getInetAddress().getHostAddress();
+			int port = incoming.getPort();
+			InputStream inputStream = incoming.getInputStream();
 			
-			status = response.getStatus();
+			// Parse input into strings
+			List<String> headerData = RestUtil.readRequestData(inputStream);
+			if (headerData == null || headerData.size() == 0)
+				return null;
+			Object body = headerData.remove(headerData.size() - 1);
+
+			// Must have 2 strings
+			if (headerData.size() < 2)
+				return null;
+
+			// Get some header info
+			String[] t1 = headerData.get(0).split(" ");
+			HttpMethod method = HttpMethod.valueOf(t1[0]);
+			String apiString = t1[1];
+			String[] apisplit = apiString.split("\\?", 2);
+			String api = apisplit[0];
+			Map<String, String> urlparams = null;
+			if ( apisplit.length > 1 )
+				urlparams = convertParams(apisplit[1]);
+
+			// Create headers
+			HttpHeaders headers = new HttpHeaders();
+			for (String string : headerData) {
+				String[] split = string.split(":", 2);
+				if (split.length != 2)
+					continue;
+				String key = split[0].trim();
+				String value = split[1].trim();
+
+				headers.put(key, value);
+			}
+			
+			// Setup cookies
+			CookieManager cookieManager = cookieManagerServer.get(jrestInstance).get(incoming);
+			if (cookieManager == null)
+				cookieManagerServer.get(jrestInstance).put(incoming, cookieManager = new CookieManager());
+			
+			// Read in cookies
+			String cookiesHeader = headers.get("Cookie");
+			if (cookiesHeader != null) {
+				String[] cookies = cookiesHeader.split(";");
+				for (String cookie : cookies) {
+					cookieManager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
+				}
+			}
+
+			// Create request object
+			String host = address.replace("0:0:0:0:0:0:0:1", "127.0.0.1");
+			URI uri = URI.create("http://" + host + ":" + port + api);
+			EndPointWrapper<?, ?> endpoint = getEndPoint(uri.getPath(), method);
+			if (endpoint != null) {
+				if ( endpoint.getConsumes().equals(MediaType.APPLICATION_FORM_URLENCODED) ) {
+					urlparams = convertParams(body.toString());
+					body = null;
+				} else {
+					body = RestUtil.convertObject(body.toString(), endpoint.getBodyType());
+				}
+			}
+			HttpRequest<Object> request = new HttpRequest<>(method, headers, body);
+			request.uri = uri;
+			request.urlParams = urlparams;
+			if (cookieManagerServer.get(jrestInstance).get(incoming) != null)
+				request.cookies = new ArrayList<>(cookieManagerServer.get(jrestInstance).get(incoming).getCookieStore().getCookies());
+			else 
+				request.cookies = new ArrayList<>();
+
+			// Return
+			return request;
 		}
-		
-		// Status Handler override
-		if ( responseHandlerMap.containsKey(status) ) {
-			endpoint = (EndPointWrapper<P, Q>) responseHandlerMap.get(status);
-			if ( endpoint != null ) {
+
+		/**
+		 * Runs when client makes http request to one of our endpoints.
+		 */
+		@SuppressWarnings("unchecked")
+		private <P,Q> void handleRequest(Socket socket, HttpRequest<P> request) throws UnsupportedEncodingException, IOException {
+			// Log
+			if (request != null)
+				jrestInstance.getLogger().trace("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
+
+			// Get matching endpoint
+			EndPointWrapper<P, Q> endpoint = (EndPointWrapper<P, Q>) getEndPoint(request.getURI().getPath(), request.getMethod());
+			MediaType produces = MediaType.TEXT_PLAIN;
+			HttpStatus status = HttpStatus.NOT_FOUND;
+			ResponseEntity<Q> response = null;
+			
+			// Query endpoint
+			if (endpoint != null) {
 				produces = endpoint.getProduces();
 				response = endpoint.query(request);
 				if (response == null)
@@ -322,136 +317,59 @@ public class JRest {
 				
 				status = response.getStatus();
 			}
-		}
-		
-		if ( response != null ) {
-			// Put response cookies into manager
-			for (HttpCookie cookie : response.getCookies()) {
-				cookieManagerServer.get(this).get(socket).getCookieStore().add(null, cookie);
-			}
-
-			Object body = response.getBody();
-			if (body == null)
-				body = new String();
-
-			// Convert body
-			String writeBody = RestUtil.convertSoString(body);
-
-			// Write response
-			BufferedOutputStream b = new BufferedOutputStream(socket.getOutputStream());
-			b.write(new String("HTTP/1.1 " + response.getStatus().value() + " " + response.getStatus().getReasonPhrase() + "\n").getBytes("UTF-8"));
-			b.write(new String("Keep-Alive: " + "timeout=5, max=99" + "\n").getBytes("UTF-8"));
-			b.write(new String("Server: " + this.getServerName() + "\n").getBytes("UTF-8"));
-			b.write(new String("Connection: " + "Keep-Alive" + "\n").getBytes("UTF-8"));
 			
-			// Write cookies to user
-			if (cookieManagerServer.get(this).containsKey(socket) && cookieManagerServer.get(this).get(socket).getCookieStore().getCookies().size() > 0) {
-				List<HttpCookie> cookiesList = cookieManagerServer.get(this).get(socket).getCookieStore().getCookies();
-				List<String> cookies = new ArrayList<>();
-				for (HttpCookie cookie : cookiesList)
-					cookies.add(cookie.toString());
-				String cookieHeader = new String("Set-Cookie: " + String.join(";", cookies) + "\n");
-				b.write(cookieHeader.getBytes("UTF-8"));
-			}
-			
-			b.write(new String("Content-Length: " + writeBody.length() + "\n").getBytes("UTF-8"));
-			b.write(new String("Content-Type: " + produces + "\n\n").getBytes("UTF-8"));
-			b.write(new String(writeBody).getBytes("UTF-8"));
-			b.flush();
-			b.close();
-		}
-	}
-	
-	/**
-	 * Convert standard URL Parameters to map
-	 */
-	private Map<String, String> convertParams(String str) {
-		Map<String, String> params = new HashMap<>();
-		String[] paramsplit = str.split("&");
-		for (String paramStr : paramsplit) {
-			String[] t = paramStr.split("=", 2);
-			if (t.length == 2) {
-				params.put(t[0], t[1]);
-			}
-		}
-		
-		return params;
-	}
-
-	protected static <T> HttpResponse<T> readResponse(HttpURLConnection connection, T type) throws IOException {
-		// Read body
-		byte[] data = RestUtil.readAll(connection.getInputStream());
-		String body = new String(data == null ? new byte[0] : data, Charset.forName("UTF-8"));
-
-		// Create response headers
-		HttpHeaders headers = new HttpHeaders();
-		Map<String, List<String>> map = connection.getHeaderFields();
-		for (Map.Entry<String, List<String>> entry : map.entrySet()) {
-			headers.put(entry.getKey(), entry.getValue().get(0));
-		}
-		
-		// Update cookies
-		List<String> cookiesHeader = map.get("Cookie");
-		if (cookiesHeader != null) {
-		    for (String cookie : cookiesHeader) {
-		        cookieManager.getCookieStore().add(null,HttpCookie.parse(cookie).get(0));
-		    }               
-		}
-
-		// Create response object
-		T tBody = RestUtil.convertObject(body, type);
-		HttpResponse<T> request = new HttpResponse<>(HttpStatus.valueOf(connection.getResponseCode()), headers, tBody);
-		request.cookies = new ArrayList<>(cookieManager.getCookieStore().getCookies());
-
-		// Return
-		return request;
-	}
-
-	private static List<String> readRequestData(InputStream inputStream) throws IOException {
-		long TIMEOUT = System.currentTimeMillis() + 1000;
-
-		BufferedInputStream bufferedInput = new BufferedInputStream(inputStream);
-		while (bufferedInput.available() == 0) {
-			if (System.currentTimeMillis() > TIMEOUT) {
-				bufferedInput.close();
-				return Arrays.asList();
-			}
-		}
-
-		// Parse input into strings
-		List<String> headerData = new ArrayList<String>();
-		boolean buildingHeader = true;
-		StringBuilder builder = new StringBuilder();
-		while (bufferedInput.available() > 0) {
-			int c = bufferedInput.read();
-			char ch = (char) (c);
-			if (ch == '\r')
-				continue;
-
-			if (ch == '\n' && buildingHeader) {
-				if (builder.length() == 0)
-					buildingHeader = false;
-
-				if (buildingHeader) {
-					headerData.add(builder.toString().trim());
-					builder.setLength(0);
+			// Status Handler override
+			if ( responseHandlerMap.containsKey(status) ) {
+				endpoint = (EndPointWrapper<P, Q>) responseHandlerMap.get(status);
+				if ( endpoint != null ) {
+					produces = endpoint.getProduces();
+					response = endpoint.query(request);
+					if (response == null)
+						response = new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+					
+					status = response.getStatus();
 				}
-			} else {
-				builder.append(ch);
+			}
+			
+			if ( response != null ) {
+				// Put response cookies into manager
+				for (HttpCookie cookie : response.getCookies()) {
+					cookieManagerServer.get(jrestInstance).get(socket).getCookieStore().add(null, cookie);
+				}
+
+				Object body = response.getBody();
+				if (body == null)
+					body = new String();
+
+				// Convert body
+				String writeBody = RestUtil.convertSoString(body);
+
+				// Get Cookie List
+				List<HttpCookie> cookiesList = null;
+				if (cookieManagerServer.get(jrestInstance).containsKey(socket))
+					cookiesList = cookieManagerServer.get(jrestInstance).get(socket).getCookieStore().getCookies();
+				
+				// Write response
+				RestUtil.write(socket, jrestInstance.getServerName(), status, produces, writeBody, cookiesList);
+				socket.getOutputStream().close();
 			}
 		}
-
-		// BODY IS LAST
-		headerData.add(builder.toString());
-		return headerData;
-	}
-
-	private EndPointWrapper<?, ?> getEndPoint(String endpoint, HttpMethod method) {
-		Map<HttpMethod, EndPointWrapper<?,?>> map = endpointMap.get(endpoint);
-		if (map == null)
-			return null;
-
-		return map.get(method);
+		
+		/**
+		 * Convert standard URL Parameters to map
+		 */
+		private Map<String, String> convertParams(String str) {
+			Map<String, String> params = new HashMap<>();
+			String[] paramsplit = str.split("&");
+			for (String paramStr : paramsplit) {
+				String[] t = paramStr.split("=", 2);
+				if (t.length == 2) {
+					params.put(t[0], t[1]);
+				}
+			}
+			
+			return params;
+		}
 	}
 	
 	/**
