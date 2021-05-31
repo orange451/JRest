@@ -1,5 +1,7 @@
 package io.jrest;
 
+import java.io.PrintStream;
+
 public class Logger {
     
     private LogType logLevel = LogType.TRACE;
@@ -8,14 +10,17 @@ public class Logger {
         if ( type.level < logLevel.level || logLevel == LogType.NONE )
             return;
         
-        StringBuilder output = new StringBuilder();
-        for(Object o : objects)
-            output.append(o);
+        PrintStream outputStream = (type == LogType.ERROR) ? System.err : System.out;
         
-        if ( type == LogType.ERROR )
-            System.err.println(output);
-        else
-            System.out.println(output);
+        for(Object o : objects) {        	
+        	if ( o instanceof Exception ) {
+        		((Exception)o).printStackTrace(outputStream);
+        	} else {
+        		outputStream.print(o);
+        	}
+        }
+        
+		outputStream.println();
     }
     
     public void trace(Object...objects) {
@@ -34,11 +39,11 @@ public class Logger {
         this.log(LogType.ERROR, objects);
     }
     
-    public void setMinLogType(LogType type) {
+    public void setLogType(LogType type) {
         this.logLevel = type;
     }
     
-    public LogType getMinLogType() {
+    public LogType getLogType() {
         return this.logLevel;
     }
 

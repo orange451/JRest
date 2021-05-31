@@ -10,6 +10,7 @@ import io.jrest.HttpStatus;
 import io.jrest.JRest;
 import io.jrest.MediaType;
 import io.jrest.ResponseEntity;
+import io.jrest.Logger.LogType;
 
 public class TestServer {
 	
@@ -26,6 +27,7 @@ public class TestServer {
 		 */
 		JRest server = JRest.create()
 				.setServerName("Test Server")
+				.setLogType(LogType.TRACE)
 				.setPort(80)
 				.start();
 		

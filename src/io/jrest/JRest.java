@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import io.jrest.Logger.LogType;
+
 public class JRest {
 	
 	/** Internal server socket used to send data to clients **/
@@ -47,9 +49,6 @@ public class JRest {
 	
 	/** Port the server is running on **/
 	private int port;
-	
-	/** Whether requests get logged to console **/
-	private boolean logRequests = true;
 	
 	/** Client use of cookies **/
 	protected static CookieManager cookieManager;
@@ -147,17 +146,16 @@ public class JRest {
 						if (incoming != null)
 							service.submit(()->readAndHandleSocket(incoming));
 					} catch (SocketTimeoutException e) {
-						e.printStackTrace();
+						this.getLogger().error(e);
 					} catch (IOException e) {
-						e.printStackTrace();
+						this.getLogger().error(e);
 					}
 				}
 				
 				this.getLogger().trace("Shutting down " + this.getServerName());
 				service.shutdown();
 			} catch (IOException e1) {
-				this.getLogger().error("Error making server... " + e1);
-				e1.printStackTrace();
+				this.getLogger().error("Error making server... ", e1);
 				error = true;
 				started = false;
 				initializing = false;
@@ -165,8 +163,7 @@ public class JRest {
 				try {
 					server.close();
 				} catch (IOException e) {
-					this.getLogger().error("Error stopping server... " + e);
-					e.printStackTrace();
+					this.getLogger().error("Error stopping server... ", e);
 				}
 				started = false;
 				initializing = false;
@@ -179,7 +176,7 @@ public class JRest {
 			try {
 				Thread.sleep(1);
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				this.getLogger().error(e);
 			}
 		}
 		
@@ -206,7 +203,7 @@ public class JRest {
 				incoming.close();
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			this.getLogger().error(e);
 		}
 	}
 
@@ -295,7 +292,7 @@ public class JRest {
 	@SuppressWarnings("unchecked")
 	private <P,Q> void handleRequest(Socket socket, HttpRequest<P> request) throws UnsupportedEncodingException, IOException {
 		// Log
-		if (request != null && isLogRequests())
+		if (request != null)
 			this.getLogger().trace("[" + new SimpleDateFormat("HH:mm:ss").format(System.currentTimeMillis()) + "] Incoming request: " + request);
 
 		// Get matching endpoint
@@ -458,11 +455,19 @@ public class JRest {
 	
 	/**
 	 * Get the logger object used to log data.
-	 * @return
 	 */
 	public Logger getLogger() {
 		return this.logger;
 	}
+	
+	/**
+	 * Set the internal log level used for logging data.
+	 * Same as calling {@link Logger#setLogType(LogType)} from {@link JRest#getLogger()}.
+	 */
+    public JRest setLogType(LogType type) {
+    	getLogger().setLogType(type);
+    	return this;
+    }
 
 	/**
 	 * Returns whether the rest server has finished initializing.
@@ -512,21 +517,6 @@ public class JRest {
 		
 		this.port = port;
 		return this;
-	}
-	
-	/**
-	 * Sets whether requests are logged or not.
-	 */
-	public JRest setLogRequests(boolean log) {
-		this.logRequests = log;
-		return this;
-	}
-	
-	/**
-	 * Returns whether requests are logged or not.
-	 */
-	public boolean isLogRequests() {
-		return this.logRequests;
 	}
 
 	/**
