@@ -1,5 +1,5 @@
 # JRest
-Super small and lightweight Java REST Library. **Only has one (optional) dependency, Gson (For POJO Serialization)!**. It doesn't use annotations, doesn't require polymorphism, and *can* work asynchrounously. If JRest is ran without the Gson dependency, DTO/POJO objects cannot be serialized/deserialized but JSON Objects can still be serialized to maps using Javas' native Nashorn Javascript engine.
+Super small and lightweight Java REST Library. **Only has one (optional) dependency, Gson (For POJO Serialization)!** JRest doesn't use annotations, doesn't require polymorphism, and *can* work asynchrounously. If JRest is ran without the Gson dependency, DTO/POJO objects cannot be serialized/deserialized but JSON Objects can still be serialized to maps using Javas' native Nashorn Javascript engine.
 
 # Why JRest?
 Many Java Rest libraries claim to be lightweight. How many require 0 dependencies, start up in less than 50 ms, are less than 50 kb in filesize, and only have 1 package? Enter JRest, the **real** lightweight Java Restful library. It can be used as a webhost, back-end server, or to make requests to already existing REST endpoints. 
