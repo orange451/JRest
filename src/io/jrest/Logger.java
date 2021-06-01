@@ -4,10 +4,13 @@ import java.io.PrintStream;
 
 public class Logger {
     
+	/** Minimum Log Level required to log data **/
     private LogType logLevel = LogType.TRACE;
     
+    /** Standard printing output **/
     private PrintStream standardOutput = System.out;
     
+    /** Error printing output **/
     private PrintStream errorOutput = System.err;
 
     /**

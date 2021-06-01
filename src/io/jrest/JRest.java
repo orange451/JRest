@@ -679,4 +679,26 @@ public class JRest {
 		
 		return this.addEndpoint(builder.getHttpMethod(), builder.getEndpoint(), builder.getConsumes(), builder.getProduces(), builder.getReceiveType(), builder.getReturnType(), builder.getRequest());
 	}
+	
+	/**
+	 * Registers a rest endpoint to the rest server. This endpoint acts as an end of
+	 * a communication channel from which APIs can interact. Uses GET request.
+	 * 
+	 * @param endpoint Endpoint API URL (Start with /)
+	 * @param object   Business logic interface
+	 */
+	public <P,Q> JRest get(String endpoint, EndPoint<Q,P> object) {
+		return addEndpoint(HttpMethod.GET, endpoint, object);
+	}
+	
+	/**
+	 * Registers a rest endpoint to the rest server. This endpoint acts as an end of
+	 * a communication channel from which APIs can interact. Uses POST request.
+	 * 
+	 * @param endpoint Endpoint API URL (Start with /)
+	 * @param object   Business logic interface
+	 */
+	public <P,Q> JRest post(String endpoint, EndPoint<Q,P> object) {
+		return addEndpoint(HttpMethod.POST, endpoint, object);
+	}
 }
