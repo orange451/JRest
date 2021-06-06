@@ -303,4 +303,11 @@ public class RestUtil {
 		b.write(new String(body).getBytes("UTF-8"));
 		b.flush();
 	}
+	
+	public static String escape(String string) {
+		if ( string == null )
+			return null;
+		
+		return string.replace("'", "\'").replace("\"", "\\\"").replace("`", "\\`");
+	}
 }
