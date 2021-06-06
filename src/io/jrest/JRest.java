@@ -239,7 +239,7 @@ public class JRest {
 			String apiString = t1[1];
 			String[] apisplit = apiString.split("\\?", 2);
 			String api = apisplit[0];
-			Map<String, String> urlparams = null;
+			Map<String, String> urlparams = new HashMap<>();
 			if ( apisplit.length > 1 )
 				urlparams = convertParams(apisplit[1]);
 
