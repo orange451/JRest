@@ -37,9 +37,9 @@ public class TestClient {
 			System.out.println("\tname: " + payload.get("name"));
 		});
 
-		// Test website endpoint
+		// Test https
 		RequestEntity<JsonArray> request4 = new RequestEntity<>(HttpMethod.GET);
-		request4.exchangeAsync("http://robloxwwii.com/RobloxServerList.php", JsonArray.class, (response)->{
+		request4.exchangeAsync("https://www.google.com/", String.class, (response)->{
 			System.out.println(response.getBody());
 		});
 	}
