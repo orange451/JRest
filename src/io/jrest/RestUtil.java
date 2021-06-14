@@ -2,8 +2,11 @@ package io.jrest;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
@@ -11,9 +14,12 @@ import java.net.Socket;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -182,9 +188,10 @@ public class RestUtil {
 			} catch (Exception e) {
 				return null;
 			}
-		} else {
-			return (T) bodyString.toString();
 		}
+		
+		// If all else fails, return the body as a string
+		return (T) bodyString.toString();
 	}
 
 	protected static byte[] readAll(InputStream inputStream) throws IOException {
@@ -255,11 +262,10 @@ public class RestUtil {
 		if ( connection.getContentEncoding() != null && connection.getContentEncoding().contains("gzip") )
 			inputStream = new GZIPInputStream(inputStream);
 		else if ( connection.getContentEncoding() != null && connection.getContentEncoding().contains("br") )
-			throw new RuntimeException("Cannot decode payload. Brotli decoding is not natively supported by Java.");
+			throw new RuntimeException("Cannot decode payload. Brotli decoding is not natively supported by Java. Please use a supported Accept-Encoding header parameter.");
 		
 		// Read body
-		byte[] data = RestUtil.readAll(inputStream);
-		String body = new String(data == null ? new byte[0] : data, Charset.forName("UTF-8"));
+		String body = utf8(RestUtil.readAll(inputStream));
 
 		// Update cookies
 		List<String> cookiesHeader = map.get("Cookie");
@@ -323,13 +329,47 @@ public class RestUtil {
 		headerData.add(builder.toString());
 		return headerData;
 	}
+	
+	private static byte[] utf8(String string) throws UnsupportedEncodingException {
+		if ( string == null )
+			return new byte[0];
+		
+		return string.getBytes("UTF-8");
+	}
+	
+	private static String utf8(byte[] data) {
+		if ( data == null )
+			return "";
+		
+		return new String(data, Charset.forName("UTF-8"));
+	}
 
-	public static void write(Socket socket, String serverName, HttpStatus status, MediaType produces, String body, List<HttpCookie> cookiesList) throws IOException {
-		BufferedOutputStream b = new BufferedOutputStream(socket.getOutputStream());
-		b.write(new String("HTTP/1.1 " + status.value() + " " + status.getReasonPhrase() + "\n").getBytes("UTF-8"));
-		b.write(new String("Keep-Alive: " + "timeout=5, max=99" + "\n").getBytes("UTF-8"));
-		b.write(new String("Server: " + serverName + "\n").getBytes("UTF-8"));
-		b.write(new String("Connection: " + "Keep-Alive" + "\n").getBytes("UTF-8"));
+	public static void write(Socket socket, String serverName, HttpStatus status, MediaType produces, String body, HttpHeaders headers, List<HttpCookie> cookiesList) throws IOException {
+		Map<String, String> defaultHeaders = new HashMap<>();
+		defaultHeaders.put(HttpHeaders.KEEP_ALIVE, "timeout=5, max=99");
+		defaultHeaders.put(HttpHeaders.SERVER, serverName);
+		defaultHeaders.put(HttpHeaders.CONNECTION, "Keep-Alive");
+		
+		if ( headers != null ) {
+			for (Entry<String, String> set : headers.entrySet()) {
+				defaultHeaders.put(set.getKey(), set.getValue());
+			}
+		}
+		
+		// Dont support Brotli
+		if ( defaultHeaders.get(HttpHeaders.CONTENT_ENCODING) != null && defaultHeaders.get(HttpHeaders.CONTENT_ENCODING).contains("br") )
+			throw new RuntimeException("Cannot write data. Brotli encoding is not natively supported by Java. Please use a different encoding parameter.");
+		
+		// Write http status
+		OutputStream outputStream = socket.getOutputStream();
+		BufferedOutputStream b = new BufferedOutputStream(outputStream);
+		b.write(utf8("HTTP/1.1 " + status.value() + " " + status.getReasonPhrase() + "\n"));
+		
+		// Write headers
+		for (Entry<String, String> set : defaultHeaders.entrySet()) {
+			String header = set.getKey() + ": " + set.getValue();
+			b.write(utf8(header + "\n"));
+		}
 		
 		// Write cookies to user
 		if (cookiesList != null && cookiesList.size() > 0) {
@@ -337,12 +377,32 @@ public class RestUtil {
 			for (HttpCookie cookie : cookiesList)
 				cookies.add(cookie.toString());
 			String cookieHeader = new String("Set-Cookie: " + String.join(";", cookies) + "\n");
-			b.write(cookieHeader.getBytes("UTF-8"));
+			b.write(utf8(cookieHeader));
 		}
 		
-		b.write(new String("Content-Length: " + body.length() + "\n").getBytes("UTF-8"));
-		b.write(new String("Content-Type: " + produces.getType() + "\n\n").getBytes("UTF-8"));
-		b.write(new String(body).getBytes("UTF-8"));
+		// Get final body
+		byte[] finalBody = null;
+		if ( defaultHeaders.get(HttpHeaders.CONTENT_ENCODING) != null && defaultHeaders.get(HttpHeaders.CONTENT_ENCODING).contains("gzip") ) {
+			ByteArrayOutputStream byteArrayOS = new ByteArrayOutputStream();
+			GZIPOutputStream gzipBodyStream = new GZIPOutputStream(byteArrayOS);
+			gzipBodyStream.write(utf8(body));
+			gzipBodyStream.close();
+			gzipBodyStream = null;
+			
+			finalBody = byteArrayOS.toByteArray();
+		} else {
+			finalBody = utf8(body);
+		}
+		
+		// Write content predata
+		b.write(utf8("Content-Length: " + finalBody.length + "\n"));
+		b.write(utf8("Content-Type: " + produces.getType() + "\n"));
+		
+		// Tell the parser that we are going to begin writing data
+		b.write(utf8("\n"));
+		
+		// Write data
+		b.write(finalBody);
 		b.flush();
 	}
 	

@@ -5,6 +5,7 @@ import java.net.HttpCookie;
 import com.google.gson.JsonObject;
 
 import io.jrest.EndpointBuilder;
+import io.jrest.HttpHeaders;
 import io.jrest.HttpMethod;
 import io.jrest.HttpStatus;
 import io.jrest.JRest;
@@ -57,6 +58,13 @@ public class TestServer {
 		 */
 		server.addEndpoint(HttpMethod.GET, "/testAPI", (request)->{
 			return new ResponseEntity<String>(HttpStatus.OK, "Hello From Server!");
+		});
+
+		/**
+		 * Test Endpoint. Returns static String
+		 */
+		server.addEndpoint(HttpMethod.GET, "/testGZIP", (request)->{
+			return new ResponseEntity<String>(HttpStatus.OK, new HttpHeaders(), "GZIP From Server!");
 		});
 		
 		/**

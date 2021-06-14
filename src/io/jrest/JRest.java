@@ -350,7 +350,7 @@ public class JRest {
 					cookiesList = cookieManagerServer.get(jrestInstance).get(socket).getCookieStore().getCookies();
 				
 				// Write response
-				RestUtil.write(socket, jrestInstance.getServerName(), status, produces, writeBody, cookiesList);
+				RestUtil.write(socket, jrestInstance.getServerName(), status, produces, writeBody, response.getHeaders(), cookiesList);
 				socket.getOutputStream().close();
 			}
 		}

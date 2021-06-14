@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 
 import com.sun.net.ssl.HostnameVerifier;
 import com.sun.net.ssl.HttpsURLConnection;
 
+@SuppressWarnings("deprecation")
 public class RequestEntity<T> extends HttpEntity<T> {
 
 	private HttpMethod method;
@@ -105,7 +105,6 @@ public class RequestEntity<T> extends HttpEntity<T> {
 	 * Queries a specified endpoint. Returns a response entity object describing the result.
 	 * @throws IOException
 	 */
-	@SuppressWarnings("deprecation")
 	public <P, Q> ResponseEntity<Q> exchange(URL url, Class<Q> responseType) throws IOException {
 		// Connect to endpoint
 		try {
