@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -196,11 +197,38 @@ public class RestUtil {
 				return null;
 			}
 		}
-
-		// Ready until empty
-		byte[] data = new byte[bufferedInput.available()];
-		bufferedInput.read(data);
-		return data;
+		
+		byte[] totalData = new byte[bufferedInput.available()];
+		bufferedInput.read(totalData);
+		
+		// GZIP has this stupid available implementation which only gives us 1 byte at a time...
+		List<byte[]> extraData = new ArrayList<>();
+		int extraBytesLen = 0;
+		while(bufferedInput.available() > 0 ) {
+			extraBytesLen += bufferedInput.available();
+			byte[] newData = new byte[bufferedInput.available()];
+			bufferedInput.read(newData);
+			extraData.add(newData);
+		}
+		
+		// Return data
+		if ( extraData.size() == 0 ) {
+			return totalData;
+		} else {
+			
+			// Iterate over all the data inputs, and combine.
+			extraData.add(0, totalData);
+			
+			byte[] ret = new byte[extraBytesLen + totalData.length];
+			int t = 0;
+			for(byte[] data : extraData) {
+				for (int i=0; i<data.length; i++) {
+					ret[t++] = data[i];
+				}
+			}
+			
+			return ret;
+		}
 	}
 
 	/**
@@ -208,16 +236,30 @@ public class RestUtil {
 	 * @throws IOException
 	 */
 	protected static <T> HttpResponse<T> readResponse(HttpURLConnection connection, T type) throws IOException {
-		// Read body
-		byte[] data = RestUtil.readAll(connection.getInputStream());
-		String body = new String(data == null ? new byte[0] : data, Charset.forName("UTF-8"));
-
 		// Create response headers
 		HttpHeaders headers = new HttpHeaders();
 		Map<String, List<String>> map = connection.getHeaderFields();
 		for (Map.Entry<String, List<String>> entry : map.entrySet()) {
-			headers.put(entry.getKey(), entry.getValue().get(0));
+			String vals = "";
+			for (String val : entry.getValue()) {
+				if ( vals.length() > 0 )
+					val += ", ";
+				
+				vals += val;
+			}
+			headers.put(entry.getKey(), vals);
 		}
+		
+		// Grab input stream
+		InputStream inputStream = connection.getInputStream();
+		if ( connection.getContentEncoding() != null && connection.getContentEncoding().contains("gzip") )
+			inputStream = new GZIPInputStream(inputStream);
+		else if ( connection.getContentEncoding() != null && connection.getContentEncoding().contains("br") )
+			throw new RuntimeException("Cannot decode payload. Brotli decoding is not natively supported by Java.");
+		
+		// Read body
+		byte[] data = RestUtil.readAll(inputStream);
+		String body = new String(data == null ? new byte[0] : data, Charset.forName("UTF-8"));
 
 		// Update cookies
 		List<String> cookiesHeader = map.get("Cookie");

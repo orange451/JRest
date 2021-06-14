@@ -14,6 +14,8 @@ public class HttpHeaders {
 	
 	public static final String ACCEPT_ENCODING = "Accept-Encoding";
 	
+	public static final String ENCODING = "encoding";
+	
 	public static final String CONTENT_TYPE = "Content-Type";
 	
 	public static final String AUTHORIZATION = "Authorization";
@@ -24,7 +26,8 @@ public class HttpHeaders {
 		this.data = new HashMap<>();
 		
 		this.setAccept(MediaType.ALL);
-		this.setAcceptEncoding("gzip, deflate, br");
+		this.setAcceptEncoding("gzip, deflate");
+		this.setEncoding("gzip");
 		this.setContentType(MediaType.TEXT_PLAIN);
 		this.put("Cache-control", "no-cache");
 	}
@@ -83,6 +86,14 @@ public class HttpHeaders {
 	
 	public String getAcceptEncoding() {
 		return this.get(ACCEPT_ENCODING);
+	}
+	
+	public void setEncoding(String encoding) {
+		this.put(ENCODING, encoding);
+	}
+	
+	public String getEncoding() {
+		return this.get(ENCODING);
 	}
 
 	public Set<Entry<String, String>> entrySet() {
