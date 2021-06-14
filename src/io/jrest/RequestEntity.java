@@ -178,7 +178,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
         	// Write body
 			if ( !this.getMethod().equals(HttpMethod.GET) ) {
 	        	BufferedOutputStream b = new BufferedOutputStream(con.getOutputStream());
-	        	b.write(body.getBytes("UTF-8"));
+	        	b.write(StringUtil.utf8(body));
 	        	b.flush();
 			}
 

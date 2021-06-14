@@ -6,12 +6,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.Socket;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -39,8 +37,14 @@ public class RestUtil {
 	private static boolean canUseGson;
 
 	private static ScriptEngine engine;
+	
+	private static final Set<String> ignoreCustomHeaders;
 
 	static {
+		ignoreCustomHeaders = new HashSet<>();
+		ignoreCustomHeaders.add(HttpHeaders.CONTENT_TYPE);
+		ignoreCustomHeaders.add("Content-Length");
+		
 		try {
 			gson = new GsonBuilder().serializeNulls().create();
 			canUseGson = true;
@@ -63,67 +67,14 @@ public class RestUtil {
 			return object.toString();
 
 		if (canUseGson)
-			return RestUtil.gson.toJson(object);
+			return gson.toJson(object);
 
 		// Oh boy manual json serialization...
 		if (object instanceof Map || object instanceof List)
-			return serializeJson(object);
+			return StringUtil.serializeJson(object);
 
 		// Fallback
 		return object.toString();
-	}
-
-	/**
-	 * Manual json serialization. Only used if Gson is not available.
-	 * 
-	 * @param object
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	private static String serializeJson(Object object) {
-
-		if (object instanceof Map) {
-			String str = "{";
-			boolean first = true;
-			for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) object).entrySet()) {
-				if (!first)
-					str += ", ";
-				str += getSerializedJSONValue(entry.getKey().toString()) + ": "
-						+ getSerializedJSONValue(entry.getValue());
-				first = false;
-			}
-			str += "}";
-			return str;
-		} else if (object instanceof List) {
-			String str = "[";
-			boolean first = true;
-			for (Object obj : (List<Object>) object) {
-				if (!first)
-					str += ", ";
-				str += getSerializedJSONValue(obj);
-				first = false;
-			}
-			str += "]";
-			return str;
-		}
-
-		return new String();
-	}
-
-	private static String getSerializedJSONValue(Object value) {
-		if (value == null)
-			return "null";
-		else if (value instanceof List)
-			return serializeJson(value);
-		else if (value instanceof Map)
-			return serializeJson(value);
-		else if (value instanceof Number || value instanceof Boolean)
-			return ((Number) value).toString();
-		else if (value instanceof String)
-			return "\"" + value.toString() + "\"";
-
-		// Cant be serialized
-		return "null";
 	}
 
 	@SuppressWarnings("unchecked")
@@ -267,7 +218,7 @@ public class RestUtil {
 			throw new RuntimeException("Cannot decode payload. Brotli decoding is not natively supported by Java. Please use a supported Accept-Encoding header parameter.");
 		
 		// Read body
-		String body = utf8(RestUtil.readAll(inputStream));
+		String body = StringUtil.utf8(RestUtil.readAll(inputStream));
 
 		// Update cookies
 		List<String> cookiesHeader = map.get("Cookie");
@@ -331,29 +282,10 @@ public class RestUtil {
 		headerData.add(builder.toString());
 		return headerData;
 	}
-	
-	private static byte[] utf8(String string) throws UnsupportedEncodingException {
-		if ( string == null )
-			return new byte[0];
-		
-		return string.getBytes("UTF-8");
-	}
-	
-	private static String utf8(byte[] data) {
-		if ( data == null )
-			return "";
-		
-		return new String(data, Charset.forName("UTF-8"));
-	}
-	
-	@SuppressWarnings("serial")
-	private static final Set<String> ignoreCustomHeaders = new HashSet<String>() {
-		{
-			this.add(HttpHeaders.CONTENT_TYPE);
-			this.add("Content-Length");
-		}
-	};
 
+	/**
+	 * Write http message to a socket.
+	 */
 	public static void write(Socket socket, String serverName, HttpStatus status, MediaType produces, String body, HttpHeaders headers, List<HttpCookie> cookiesList) throws IOException {
 		Map<String, String> defaultHeaders = new HashMap<>();
 		defaultHeaders.put(HttpHeaders.KEEP_ALIVE, "timeout=5, max=99");
@@ -376,12 +308,12 @@ public class RestUtil {
 		// Write http status
 		OutputStream outputStream = socket.getOutputStream();
 		BufferedOutputStream b = new BufferedOutputStream(outputStream);
-		b.write(utf8("HTTP/1.1 " + status.value() + " " + status.getReasonPhrase() + "\n"));
+		b.write(StringUtil.utf8("HTTP/1.1 " + status.value() + " " + status.getReasonPhrase() + "\n"));
 		
 		// Write headers
 		for (Entry<String, String> set : defaultHeaders.entrySet()) {
 			String header = set.getKey() + ": " + set.getValue();
-			b.write(utf8(header + "\n"));
+			b.write(StringUtil.utf8(header + "\n"));
 		}
 		
 		// Write cookies to user
@@ -390,7 +322,7 @@ public class RestUtil {
 			for (HttpCookie cookie : cookiesList)
 				cookies.add(cookie.toString());
 			String cookieHeader = new String("Set-Cookie: " + String.join(";", cookies) + "\n");
-			b.write(utf8(cookieHeader));
+			b.write(StringUtil.utf8(cookieHeader));
 		}
 		
 		// Get final body
@@ -398,31 +330,24 @@ public class RestUtil {
 		if ( defaultHeaders.get(HttpHeaders.CONTENT_ENCODING) != null && defaultHeaders.get(HttpHeaders.CONTENT_ENCODING).contains("gzip") ) {
 			ByteArrayOutputStream byteArrayOS = new ByteArrayOutputStream();
 			GZIPOutputStream gzipBodyStream = new GZIPOutputStream(byteArrayOS);
-			gzipBodyStream.write(utf8(body));
+			gzipBodyStream.write(StringUtil.utf8(body));
 			gzipBodyStream.close();
 			gzipBodyStream = null;
 			
 			finalBody = byteArrayOS.toByteArray();
 		} else {
-			finalBody = utf8(body);
+			finalBody = StringUtil.utf8(body);
 		}
 		
 		// Write content predata
-		b.write(utf8("Content-Length: " + finalBody.length + "\n"));
-		b.write(utf8("Content-Type: " + produces.getType() + "\n"));
+		b.write(StringUtil.utf8("Content-Length: " + finalBody.length + "\n"));
+		b.write(StringUtil.utf8("Content-Type: " + produces.getType() + "\n"));
 		
 		// Tell the parser that we are going to begin writing data
-		b.write(utf8("\n"));
+		b.write(StringUtil.utf8("\n"));
 		
 		// Write data
 		b.write(finalBody);
 		b.flush();
-	}
-	
-	public static String escape(String string) {
-		if ( string == null )
-			return null;
-		
-		return string.replace("'", "\'").replace("\"", "\\\"").replace("`", "\\`");
 	}
 }
