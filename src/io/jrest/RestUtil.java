@@ -15,9 +15,11 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -343,6 +345,14 @@ public class RestUtil {
 		
 		return new String(data, Charset.forName("UTF-8"));
 	}
+	
+	@SuppressWarnings("serial")
+	private static final Set<String> ignoreCustomHeaders = new HashSet<String>() {
+		{
+			this.add(HttpHeaders.CONTENT_TYPE);
+			this.add("Content-Length");
+		}
+	};
 
 	public static void write(Socket socket, String serverName, HttpStatus status, MediaType produces, String body, HttpHeaders headers, List<HttpCookie> cookiesList) throws IOException {
 		Map<String, String> defaultHeaders = new HashMap<>();
@@ -352,6 +362,9 @@ public class RestUtil {
 		
 		if ( headers != null ) {
 			for (Entry<String, String> set : headers.entrySet()) {
+				if ( ignoreCustomHeaders.contains(set.getKey()) ) 
+					continue;
+				
 				defaultHeaders.put(set.getKey(), set.getValue());
 			}
 		}
