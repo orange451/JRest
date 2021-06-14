@@ -58,9 +58,6 @@ public class RestUtil {
 
 	/**
 	 * Attempts to serialize an object (Map, List, POJO, String) to a string.
-	 * 
-	 * @param object
-	 * @return
 	 */
 	protected static String convertSoString(Object object) {
 		if (object instanceof String)
@@ -77,6 +74,9 @@ public class RestUtil {
 		return object.toString();
 	}
 
+	/**
+	 * Attempt to deserialize a string in to a specified type.
+	 */
 	@SuppressWarnings("unchecked")
 	protected static <T> T convertObject(String bodyString, T type) {
 		if (bodyString == null || bodyString.length() == 0)
@@ -143,10 +143,13 @@ public class RestUtil {
 			}
 		}
 		
-		// If all else fails, return the body as a string
-		return (T) bodyString.toString();
+		// If we can't convert, we must return null.
+		return (T) null;
 	}
 
+	/**
+	 * Read all data of an input stream and return a byte array.
+	 */
 	protected static byte[] readAll(InputStream inputStream) throws IOException {
 		long TIMEOUT = System.currentTimeMillis() + 2000;
 
