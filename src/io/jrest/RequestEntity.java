@@ -12,6 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+
+import com.sun.net.ssl.HostnameVerifier;
+import com.sun.net.ssl.HttpsURLConnection;
+
 public class RequestEntity<T> extends HttpEntity<T> {
 
 	private HttpMethod method;
@@ -99,6 +105,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 	 * Queries a specified endpoint. Returns a response entity object describing the result.
 	 * @throws IOException
 	 */
+	@SuppressWarnings("deprecation")
 	public <P, Q> ResponseEntity<Q> exchange(URL url, Class<Q> responseType) throws IOException {
 		// Connect to endpoint
 		try {
@@ -120,11 +127,28 @@ public class RequestEntity<T> extends HttpEntity<T> {
 			if ( this.getMethod().equals(HttpMethod.POST) )
 				con.setDoOutput(true);
 			con.setRequestMethod(this.getMethod().toString());
+			
+			// Deprecated HttpsURLConnection stuff
+			if ( con instanceof HttpsURLConnection ) {
+				HttpsURLConnection httpsCon = (HttpsURLConnection)con;
+				httpsCon.setHostnameVerifier(new HostnameVerifier() {
+					@Override
+					public boolean verify(String urlHostname, String certHostname) {
+						return HttpsURLConnection.getDefaultHostnameVerifier().verify(urlHostname, certHostname);
+					}
+		        });
+				httpsCon.setSSLSocketFactory((SSLSocketFactory) SSLSocketFactory.getDefault());
+			}
 
 			// Hidden headers
-			if ( this.getHeaders().get("Host") == null ) {
+			if ( this.getHeaders().get(HttpHeaders.HOST) == null ) {
 				String port = url.getPort() == -1 ? "" : (":" + url.getPort());
-				this.getHeaders().put("Host", url.getHost() + port);
+				this.getHeaders().put(HttpHeaders.HOST, url.getHost() + port);
+			}
+			
+			// User agent???
+			if ( this.getHeaders().get(HttpHeaders.USER_AGENT) == null ) {
+				con.setRequestProperty(HttpHeaders.USER_AGENT, "Mozilla/5.0 (" + System.getProperty("os.name") + ") Java/" + System.getProperty("java.version"));
 			}
 			
 			// Cookies!
