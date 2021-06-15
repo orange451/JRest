@@ -17,13 +17,6 @@ import io.jrest.Logger.LogType;
 
 public class PersistedSessionServerTest {
 	
-	static String[] names = {
-			"Frank",
-			"Jeff",
-			"Oliver",
-			"Maxwell"
-	};
-
 	public static void main(String[] args) {
 		/**
 		 * Start server
@@ -46,7 +39,7 @@ public class PersistedSessionServerTest {
 			String text = "Value of session.TESTKEY = " + session.get("TESTKEY");
 			session.put("TESTKEY", "Hello World!");
 			
-			/** Write all sessions to file **/
+			/** Write all sessions to file for storage **/
 			writeSessions(JRest.getSessionStorage().serializeSessions());
 			// TODO replace this with a more elegant solution. No need to write every time the endpoint is called.
 			
