@@ -1,6 +1,5 @@
 package io.jrest;
 
-import java.net.HttpCookie;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -17,17 +16,21 @@ public class HttpSession {
 	/**
 	 * Data held in this session
 	 */
-	private Map<String, Object> data;
+	protected Map<String, Object> data;
 	
 	/**
 	 * Describes if the session is still valid
 	 */
-	private boolean valid;
+	protected boolean valid;
 	
 	public HttpSession(UUID uuid) {
 		this.data = new HashMap<>();
 		this.uuid = uuid;
 		this.valid = true;
+	}
+	
+	public HttpSession(String uuid) {
+		this(UUID.fromString(uuid));
 	}
 	
 	public HttpSession() {
@@ -54,10 +57,18 @@ public class HttpSession {
 		return this.data.get(key);
 	}
 	
-	public HttpCookie toCookie() {
-		HttpCookie cookie = new HttpCookie(SESSION_NAME, uuid.toString());
-		cookie.setSecure(false);
-		cookie.setHttpOnly(false);
-		return cookie;
+	public String toString() {
+		StringBuilder s = new StringBuilder();
+		
+		s.append("HttpSession [");
+		s.append("UUID=");
+		s.append(uuid);
+		s.append(", Valid=");
+		s.append(valid);
+		s.append(", Data=");
+		s.append(RestUtil.convertToString(data));
+		s.append("]");
+		
+		return s.toString();
 	}
 }

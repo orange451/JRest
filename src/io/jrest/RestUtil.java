@@ -59,7 +59,7 @@ public class RestUtil {
 	/**
 	 * Attempts to serialize an object (Map, List, POJO, String) to a string.
 	 */
-	protected static String convertSoString(Object object) {
+	protected static String convertToString(Object object) {
 		if (object instanceof String)
 			return object.toString();
 
@@ -78,7 +78,7 @@ public class RestUtil {
 	 * Attempt to deserialize a string in to a specified type.
 	 */
 	@SuppressWarnings("unchecked")
-	protected static <T> T convertObject(String bodyString, T type) {
+	protected static <T> T convertToObject(String bodyString, T type) {
 		if (bodyString == null || bodyString.length() == 0)
 			return (T) null;
 
@@ -235,7 +235,7 @@ public class RestUtil {
 		}
 
 		// Create response object
-		T tBody = RestUtil.convertObject(body, type);
+		T tBody = RestUtil.convertToObject(body, type);
 		HttpResponse<T> request = new HttpResponse<>(HttpStatus.valueOf(connection.getResponseCode()), headers, tBody);
 		request.cookies = new ArrayList<>(JRest.cookieManager.getCookieStore().getCookies());
 

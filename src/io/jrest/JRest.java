@@ -48,11 +48,11 @@ public class JRest {
 	/** Client use of cookies **/
 	protected static CookieManager cookieManager;
 	
-	/** Server use of sessions **/
-	protected static SessionStorage sessionStorage;
-	
 	/** Server use of cookies **/
 	private static Map<JRest, Map<Socket, CookieManager>> cookieManagerServer;
+	
+	/** Server use of sessions **/
+	protected static SessionStorage sessionStorage;
 	
 	/** Logger used for output **/
 	private Logger logger;
@@ -290,7 +290,7 @@ public class JRest {
 					urlparams = convertParams(body.toString());
 					body = null;
 				} else {
-					body = RestUtil.convertObject(body.toString(), endpoint.getBodyType());
+					body = RestUtil.convertToObject(body.toString(), endpoint.getBodyType());
 				}
 			}
 			
@@ -374,7 +374,7 @@ public class JRest {
 					body = new String();
 
 				// Convert body
-				String writeBody = RestUtil.convertSoString(body);
+				String writeBody = RestUtil.convertToString(body);
 
 				// Get Cookie List
 				List<HttpCookie> cookiesList = new ArrayList<>();
@@ -384,56 +384,11 @@ public class JRest {
 				
 				// Add in session (only if it exists, we dont want to generate one)
 				if ( request.hasSession() && request.session().isValid() )
-					cookiesList.add(request.session().toCookie());
+					cookiesList.add(SessionUtil.toCookie(request.session()));
 				
 				// Write response
 				RestUtil.write(socket, jrestInstance.getServerName(), status, produces, writeBody, response.getHeaders(), cookiesList);
 				socket.getOutputStream().close();
-			}
-		}
-	}
-	
-	static class SessionStorage {
-		private Map<String, HttpSession> storage = new HashMap<>();
-		
-		/**
-		 * Get a session by its uuid string.
-		 */
-		public HttpSession get(String uuid) {
-			return storage.get(uuid);
-		}
-		
-		/**
-		 * Create a new HttpSession and add it to the storage.
-		 */
-		public HttpSession create() {
-			HttpSession session = new HttpSession();
-			storage.put(session.getUUID().toString(), session);
-			return session;
-		}
-		
-		/**
-		 * Returns all active sessions. See {@link HttpSession#isValid()}.
-		 */
-		public List<HttpSession> getSessions() {
-			List<HttpSession> sessions = new ArrayList<>();
-			
-			for (HttpSession session : storage.values()) {
-				if ( !session.isValid() )
-					continue;
-				
-				sessions.add(session);
-			}
-			
-			return sessions;
-		}
-		
-		/**
-		 * Loads a list of sessions in to session storage.
-		 */
-		public void loadSessions(List<HttpSession> sessions) {
-			for (HttpSession session : sessions) {
-				storage.put(session.getUUID().toString(), session);
 			}
 		}
 	}
@@ -502,6 +457,13 @@ public class JRest {
 		
 		this.port = port;
 		return this;
+	}
+	
+	/**
+	 * Return the session storage used for this JREST server.
+	 */
+	public static SessionStorage getSessionStorage() {
+		return sessionStorage;
 	}
 
 	/**

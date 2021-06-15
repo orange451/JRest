@@ -169,7 +169,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
             // Get usable body
         	String body = null;
         	if ( getBody() != null && !bodyInUrl )
-        		body = RestUtil.convertSoString(getBody());
+        		body = RestUtil.convertToString(getBody());
         	else
         		body = new String();
         	
