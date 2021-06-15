@@ -396,14 +396,45 @@ public class JRest {
 	static class SessionStorage {
 		private Map<String, HttpSession> storage = new HashMap<>();
 		
+		/**
+		 * Get a session by its uuid string.
+		 */
 		public HttpSession get(String uuid) {
 			return storage.get(uuid);
 		}
 		
+		/**
+		 * Create a new HttpSession and add it to the storage.
+		 */
 		public HttpSession create() {
 			HttpSession session = new HttpSession();
 			storage.put(session.getUUID().toString(), session);
 			return session;
+		}
+		
+		/**
+		 * Returns all active sessions. See {@link HttpSession#isValid()}.
+		 */
+		public List<HttpSession> getSessions() {
+			List<HttpSession> sessions = new ArrayList<>();
+			
+			for (HttpSession session : storage.values()) {
+				if ( !session.isValid() )
+					continue;
+				
+				sessions.add(session);
+			}
+			
+			return sessions;
+		}
+		
+		/**
+		 * Loads a list of sessions in to session storage.
+		 */
+		public void loadSessions(List<HttpSession> sessions) {
+			for (HttpSession session : sessions) {
+				storage.put(session.getUUID().toString(), session);
+			}
 		}
 	}
 	
