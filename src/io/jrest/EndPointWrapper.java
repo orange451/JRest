@@ -50,7 +50,16 @@ class EndPointWrapper<P, Q> {
 			useRequest.uri = request.getURI();
 			useRequest.urlParams = request.getUrlParameters();
 			useRequest.cookies = request.getCookies();
-			return getEndpoint().run(useRequest);
+			
+			if ( request.hasSession() )
+				useRequest.setSession(request.session());
+			
+			ResponseEntity<Q> response = getEndpoint().run(useRequest);
+			
+			if ( useRequest.hasSession() )
+				request.setSession(useRequest.session());
+			
+			return response;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

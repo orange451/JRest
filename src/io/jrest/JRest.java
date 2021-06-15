@@ -48,6 +48,9 @@ public class JRest {
 	/** Client use of cookies **/
 	protected static CookieManager cookieManager;
 	
+	/** Server use of sessions **/
+	protected static SessionStorage sessionStorage;
+	
 	/** Server use of cookies **/
 	private static Map<JRest, Map<Socket, CookieManager>> cookieManagerServer;
 	
@@ -57,6 +60,7 @@ public class JRest {
 	static {
 		cookieManagerServer = new HashMap<>();
 		cookieManager = new CookieManager();
+		sessionStorage = new SessionStorage();
 	}
 	
 	/** Use {@link JRest#create()} to create a new JRest instance **/
@@ -261,15 +265,23 @@ public class JRest {
 				cookieManagerServer.get(jrestInstance).put(incoming, cookieManager = new CookieManager());
 			
 			// Read in cookies
+			HttpSession session = null;
 			String cookiesHeader = headers.get("Cookie");
 			if (cookiesHeader != null) {
-				String[] cookies = cookiesHeader.split(";");
-				for (String cookie : cookies) {
-					cookieManager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
+				String[] cookiesSplit = cookiesHeader.split(";"); // TODO find a better way to split the cookies. This format is not guaranteed.
+				for (String cookieString : cookiesSplit) {
+					List<HttpCookie> cookies = HttpCookie.parse(cookieString);
+					for (HttpCookie hcookie : cookies) {
+						if ( hcookie.getName().equalsIgnoreCase(HttpSession.SESSION_NAME) ) {
+							session = sessionStorage.get(hcookie.getValue());
+						} else {
+							cookieManager.getCookieStore().add(null, hcookie);
+						}
+					}
 				}
 			}
 
-			// Create request object
+			// Get Body
 			String host = address.replace("0:0:0:0:0:0:0:1", "127.0.0.1");
 			URI uri = URI.create("http://" + host + ":" + port + api);
 			EndPointWrapper<?, ?> endpoint = getEndPoint(uri.getPath(), method);
@@ -281,6 +293,8 @@ public class JRest {
 					body = RestUtil.convertObject(body.toString(), endpoint.getBodyType());
 				}
 			}
+			
+			// Create request object
 			HttpRequest<Object> request = new HttpRequest<>(method, headers, body);
 			request.uri = uri;
 			request.urlParams = urlparams;
@@ -288,9 +302,27 @@ public class JRest {
 				request.cookies = new ArrayList<>(cookieManagerServer.get(jrestInstance).get(incoming).getCookieStore().getCookies());
 			else 
 				request.cookies = new ArrayList<>();
+			
+			request.setSession(session);
 
 			// Return
 			return request;
+		}
+		
+		/**
+		 * Convert standard URL Parameters to map
+		 */
+		private Map<String, String> convertParams(String str) {
+			Map<String, String> params = new HashMap<>();
+			String[] paramsplit = str.split("&");
+			for (String paramStr : paramsplit) {
+				String[] t = paramStr.split("=", 2);
+				if (t.length == 2) {
+					params.put(t[0], t[1]);
+				}
+			}
+			
+			return params;
 		}
 
 		/**
@@ -345,30 +377,33 @@ public class JRest {
 				String writeBody = RestUtil.convertSoString(body);
 
 				// Get Cookie List
-				List<HttpCookie> cookiesList = null;
+				List<HttpCookie> cookiesList = new ArrayList<>();
 				if (cookieManagerServer.get(jrestInstance).containsKey(socket))
-					cookiesList = cookieManagerServer.get(jrestInstance).get(socket).getCookieStore().getCookies();
+					for (HttpCookie cookie : cookieManagerServer.get(jrestInstance).get(socket).getCookieStore().getCookies())
+						cookiesList.add(cookie);
+				
+				// Add in session (only if it exists, we dont want to generate one)
+				if ( request.hasSession() && request.session().isValid() )
+					cookiesList.add(request.session().toCookie());
 				
 				// Write response
 				RestUtil.write(socket, jrestInstance.getServerName(), status, produces, writeBody, response.getHeaders(), cookiesList);
 				socket.getOutputStream().close();
 			}
 		}
+	}
+	
+	static class SessionStorage {
+		private Map<String, HttpSession> storage = new HashMap<>();
 		
-		/**
-		 * Convert standard URL Parameters to map
-		 */
-		private Map<String, String> convertParams(String str) {
-			Map<String, String> params = new HashMap<>();
-			String[] paramsplit = str.split("&");
-			for (String paramStr : paramsplit) {
-				String[] t = paramStr.split("=", 2);
-				if (t.length == 2) {
-					params.put(t[0], t[1]);
-				}
-			}
-			
-			return params;
+		public HttpSession get(String uuid) {
+			return storage.get(uuid);
+		}
+		
+		public HttpSession create() {
+			HttpSession session = new HttpSession();
+			storage.put(session.getUUID().toString(), session);
+			return session;
 		}
 	}
 	

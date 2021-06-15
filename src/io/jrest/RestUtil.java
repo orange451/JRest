@@ -227,7 +227,10 @@ public class RestUtil {
 		List<String> cookiesHeader = map.get("Cookie");
 		if (cookiesHeader != null) {
 			for (String cookie : cookiesHeader) {
-				JRest.cookieManager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
+				List<HttpCookie> cookies = HttpCookie.parse(cookie);
+				for (HttpCookie hcookie : cookies) {
+					JRest.cookieManager.getCookieStore().add(null, hcookie);
+				}
 			}
 		}
 
@@ -321,11 +324,10 @@ public class RestUtil {
 		
 		// Write cookies to user
 		if (cookiesList != null && cookiesList.size() > 0) {
-			List<String> cookies = new ArrayList<>();
-			for (HttpCookie cookie : cookiesList)
-				cookies.add(cookie.toString());
-			String cookieHeader = new String("Set-Cookie: " + String.join(";", cookies) + "\n");
-			b.write(StringUtil.utf8(cookieHeader));
+			for (HttpCookie cookie : cookiesList) {
+				String cookieHeader = new String("Set-Cookie: " + cookie + "\n");
+				b.write(StringUtil.utf8(cookieHeader));
+			}
 		}
 		
 		// Get final body

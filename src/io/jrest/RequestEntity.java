@@ -155,6 +155,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 				List<HttpCookie> cookiesList = getCookies();
 				List<String> cookies = new ArrayList<>();
 				for (HttpCookie cookie : cookiesList) {
+					cookie.setVersion(0); // Sending cookies use simple version!
 					cookies.add(cookie.toString());
 				}
 				con.setRequestProperty("Cookie", String.join(";", cookies));

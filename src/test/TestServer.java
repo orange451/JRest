@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import io.jrest.EndpointBuilder;
 import io.jrest.HttpHeaders;
 import io.jrest.HttpMethod;
+import io.jrest.HttpSession;
 import io.jrest.HttpStatus;
 import io.jrest.JRest;
 import io.jrest.MediaType;
@@ -125,6 +126,19 @@ public class TestServer {
 			
 			ResponseEntity<JsonObject> response = new ResponseEntity<JsonObject>(HttpStatus.OK, jsonObject);
 			response.getCookies().add(new HttpCookie("TestCookie", "Message123"));
+			return response;
+		});
+		
+		/**
+		 * Session test!
+		 */
+		server.addEndpoint(HttpMethod.GET, "/testSession", MediaType.ALL, (request)->{
+			HttpSession session = request.session();
+			
+			String text = "Value of session.TESTKEY = " + session.get("TESTKEY");
+			session.put("TESTKEY", "Hello World!");
+			
+			ResponseEntity<String> response = new ResponseEntity<String>(HttpStatus.OK, text);
 			return response;
 		});
 		
