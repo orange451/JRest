@@ -82,7 +82,7 @@ public class StringUtil {
 		else if (value instanceof Map)
 			return serializeJson(value);
 		else if (value instanceof Number || value instanceof Boolean)
-			return ((Number) value).toString();
+			return value.toString();
 		else if (value instanceof String)
 			return "\"" + value.toString() + "\"";
 

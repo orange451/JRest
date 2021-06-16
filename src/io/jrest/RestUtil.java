@@ -6,6 +6,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
@@ -25,14 +27,14 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
-
 public class RestUtil {
-	private static Gson gson;
+	private static Object gson;
+	
+	private static Method gson_fromJson;
+
+	private static Method gson_toJsonTree;
+	
+	private static Method gson_toJson;
 
 	private static boolean canUseGson;
 
@@ -46,11 +48,19 @@ public class RestUtil {
 		ignoreCustomHeaders.add("Content-Length");
 		
 		try {
-			gson = new GsonBuilder().serializeNulls().create();
-			canUseGson = true;
-		} catch (NoClassDefFoundError e) {
-			System.err.println("Could not locate Gson dependency, will not serialize Java classes. Using Nashorn engine as fallback Map/List serializer.");
+			Object builder = Class.forName("com.google.gson.GsonBuilder").newInstance();
+			builder.getClass().getMethod("serializeNulls").invoke(builder);
+			gson = builder.getClass().getMethod("create").invoke(builder);
 
+			gson_toJsonTree = gson.getClass().getMethod("toJsonTree", Object.class);
+			gson_toJson = gson.getClass().getMethod("toJson", Object.class);
+			gson_fromJson = gson.getClass().getMethod("fromJson", String.class, Type.class);
+			
+			canUseGson = true;
+		} catch (Exception e) {
+			System.err.println("Could not locate Gson dependency, will not serialize Java classes. Using Nashorn engine as fallback Map/List serializer.");
+			
+			e.printStackTrace();
 			ScriptEngineManager sem = new ScriptEngineManager();
 			engine = sem.getEngineByName("javascript");
 		}
@@ -64,7 +74,11 @@ public class RestUtil {
 			return object.toString();
 
 		if (canUseGson)
-			return gson.toJson(object);
+			try {
+				return (String) gson_toJson.invoke(gson, object);
+			} catch (Exception e) {
+				//
+			}
 
 		// Oh boy manual json serialization...
 		if (object instanceof Map || object instanceof List)
@@ -85,34 +99,9 @@ public class RestUtil {
 		Class<?> c = (Class<?>) type;
 
 		if (canUseGson) {
-			// Convert to gson tree
-			if (JsonObject.class.isAssignableFrom(c)) {
-				Type empMapType = new TypeToken<Map<String, Object>>() {
-				}.getType();
-				return (T) gson.toJsonTree(gson.fromJson(bodyString, empMapType)).getAsJsonObject();
-			}
-
-			// json array
-			if (JsonArray.class.isAssignableFrom(c)) {
-				Type empMapType = new TypeToken<List<Object>>() {
-				}.getType();
-				Object obj = gson.fromJson(bodyString, empMapType);
-				return (T) gson.toJsonTree(obj).getAsJsonArray();
-			}
-
-			// Convert to map
-			if (Map.class.isAssignableFrom(c)) {
-				Type empMapType = new TypeToken<Map<String, Object>>() {
-				}.getType();
-				return gson.fromJson(bodyString, empMapType);
-			}
-
-			// Convert to list
-			if (List.class.isAssignableFrom(c)) {
-				Type empMapType = new TypeToken<List<Object>>() {
-				}.getType();
-				return gson.fromJson(bodyString, empMapType);
-			}
+			T result = convertToObjectGson(bodyString, type);
+			if ( result != null )
+				return result;
 		} else {
 			// Super ugly hack using Javax Nashorn js library. We can only reliably get Maps
 			// or Lists.
@@ -136,15 +125,67 @@ public class RestUtil {
 
 		// Try to parse DTO as fallback
 		if (canUseGson) {
-			try {
-				return (T) gson.fromJson(bodyString, c);
-			} catch (Exception e) {
-				return null;
-			}
+			return parseDTOGson(bodyString, type);
 		}
 		
 		// If we can't convert, we must return null.
 		return (T) null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T> T parseDTOGson(String bodyString, T type) {
+		Class<?> c = (Class<?>) type;
+		
+		try {
+			return (T) gson_fromJson.invoke(gson, bodyString, c);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T> T convertToObjectGson(String bodyString, T type) {
+		Class<?> c = (Class<?>) type;
+
+		try {
+			Class<?> JsonObject = Class.forName("com.google.gson.JsonObject");
+			Class<?> JsonArray = Class.forName("com.google.gson.JsonArray");
+			Class<?> TypeToken = Class.forName("com.google.gson.reflect.TypeToken");
+			
+			Method getType = TypeToken.getMethod("getType");
+			Object t = TypeToken.newInstance();
+			Type empMapType = (Type) getType.invoke(t);
+			
+			// Convert to gson tree
+			if (JsonObject.isAssignableFrom(c)) {
+				Object obj = gson_fromJson.invoke(gson, bodyString, empMapType);
+				Object jsonTree = gson_toJsonTree.invoke(gson,  obj);
+				Method m = jsonTree.getClass().getMethod("getAsJsonArray");
+				return (T) m.invoke(jsonTree);
+			}
+	
+			// json array
+			if (JsonArray.isAssignableFrom(c)) {
+				Object obj = gson_fromJson.invoke(gson, bodyString, empMapType);
+				Object jsonTree = gson_toJsonTree.invoke(gson,  obj);
+				Method m = jsonTree.getClass().getMethod("getAsJsonArray");
+				return (T) m.invoke(jsonTree);
+			}
+	
+			// Convert to map
+			if (Map.class.isAssignableFrom(c)) {
+				return (T) gson_fromJson.invoke(gson, bodyString, empMapType);
+			}
+	
+			// Convert to list
+			if (List.class.isAssignableFrom(c)) {
+				return (T) gson_fromJson.invoke(gson, bodyString, empMapType);
+			}
+		} catch(Exception e) {
+			//
+		}
+		
+		return null;
 	}
 
 	/**
