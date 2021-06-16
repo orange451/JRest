@@ -6,7 +6,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.net.HttpCookie;
@@ -58,9 +57,7 @@ public class RestUtil {
 			
 			canUseGson = true;
 		} catch (Exception e) {
-			System.err.println("Could not locate Gson dependency, will not serialize Java classes. Using Nashorn engine as fallback Map/List serializer.");
-			
-			e.printStackTrace();
+			System.err.println("Could not locate Gson dependency, will not serialize Java classes to DTO/POJO. Using Nashorn engine as fallback Map/List serializer.");
 			ScriptEngineManager sem = new ScriptEngineManager();
 			engine = sem.getEngineByName("javascript");
 		}
