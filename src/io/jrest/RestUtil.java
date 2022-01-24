@@ -6,11 +6,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.Socket;
@@ -22,13 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 
 public class RestUtil {
 	
@@ -48,10 +38,7 @@ public class RestUtil {
 		try {
 			nashorn = new MarshallerNashorn();
 			gson = new MarshallerGson();
-			
-			Object builder = Class.forName("com.google.gson.GsonBuilder").newInstance();
-			builder.getClass().getMethod("serializeNulls").invoke(builder);
-			builder.getClass().getMethod("create").invoke(builder);
+			gson.parse(null, null);
 			
 			canUseGson = true;
 		} catch (Exception e) {

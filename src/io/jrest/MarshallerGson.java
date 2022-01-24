@@ -14,12 +14,24 @@ public class MarshallerGson extends Marshaller {
 		if ( gson == null )
 			gson = new com.google.gson.GsonBuilder().serializeNulls().setLenient().create();
 		
+		if ( type == null || body == null )
+			return null;
+		
 		// Kinda ugly PLS FIX
 		if ( body.length() > 1024 ) {
 			body = body.trim();
 		}
 		
 		Class<?> c = (Class<?>) type;
+		
+		// Convert to user specific DTO object
+		if ( !String.class.isAssignableFrom(c) ) {
+			try {
+				return (T) gson.fromJson(body, c);
+			} catch(Exception e) {
+				//
+			}
+		}
 
 		// Convert to gson tree
 		if (com.google.gson.JsonObject.class.isAssignableFrom(c)) {
@@ -43,11 +55,6 @@ public class MarshallerGson extends Marshaller {
 		if (List.class.isAssignableFrom(c)) {
 			Type empMapType = new com.google.gson.reflect.TypeToken<List<Object>>() {}.getType();
 			return gson.fromJson(body, empMapType);
-		}
-		
-		// Convert to user specific DTO object
-		if ( !String.class.isAssignableFrom(c) ) {
-			return (T) gson.fromJson(body, c);
 		}
 		
 		return null;
