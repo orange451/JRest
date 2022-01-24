@@ -6,7 +6,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
@@ -19,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -27,19 +31,14 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 public class RestUtil {
-	private static Object gson;
 	
-	private static Method gson_fromJson;
-
-	private static Method gson_toJsonTree;
-	
-	private static Method gson_toJson;
-
 	private static boolean canUseGson;
-
-	private static ScriptEngine engine;
 	
 	private static final Set<String> ignoreCustomHeaders;
+	
+	private static MarshallerNashorn nashorn;
+	
+	private static MarshallerGson gson;
 
 	static {
 		ignoreCustomHeaders = new HashSet<>();
@@ -47,19 +46,16 @@ public class RestUtil {
 		ignoreCustomHeaders.add("Content-Length");
 		
 		try {
+			nashorn = new MarshallerNashorn();
+			gson = new MarshallerGson();
+			
 			Object builder = Class.forName("com.google.gson.GsonBuilder").newInstance();
 			builder.getClass().getMethod("serializeNulls").invoke(builder);
-			gson = builder.getClass().getMethod("create").invoke(builder);
-
-			gson_toJsonTree = gson.getClass().getMethod("toJsonTree", Object.class);
-			gson_toJson = gson.getClass().getMethod("toJson", Object.class);
-			gson_fromJson = gson.getClass().getMethod("fromJson", String.class, Type.class);
+			builder.getClass().getMethod("create").invoke(builder);
 			
 			canUseGson = true;
 		} catch (Exception e) {
 			System.err.println("Could not locate Gson dependency, will not serialize Java classes to DTO/POJO. Using Nashorn engine as fallback Map/List serializer.");
-			ScriptEngineManager sem = new ScriptEngineManager();
-			engine = sem.getEngineByName("javascript");
 		}
 	}
 
@@ -71,11 +67,7 @@ public class RestUtil {
 			return object.toString();
 
 		if (canUseGson)
-			try {
-				return (String) gson_toJson.invoke(gson, object);
-			} catch (Exception e) {
-				//
-			}
+			return gson.stringify(object);
 
 		// Oh boy manual json serialization...
 		if (object instanceof Map || object instanceof List)
@@ -94,95 +86,26 @@ public class RestUtil {
 			return (T) null;
 
 		Class<?> c = (Class<?>) type;
-
+		
+		// Try gson
 		if (canUseGson) {
-			T result = convertToObjectGson(bodyString, type);
+			T result = gson.parse(bodyString, type);
 			if ( result != null )
 				return result;
-		} else {
-			// Super ugly hack using Javax Nashorn js library. We can only reliably get Maps
-			// or Lists.
-			String script = "Java.asJSONCompatible(" + bodyString + ")";
-			try {
-				Object result = engine.eval(script);
-				if (result instanceof Map)
-					return (T) ((Map<?, ?>) result);
-				if (result instanceof List)
-					return (T) ((List<?>) result);
-			} catch (ScriptException e) {
-				System.err.println("Failed to parse " + script);
-				e.printStackTrace();
-			}
 		}
-
-		// Convert to String
+		
+		// Try nashorn
+		T result = nashorn.parse(bodyString, type);
+		if ( result != null )
+			return result;
+		
+		// Convert to String if its the type
 		if (String.class.isAssignableFrom(c)) {
 			return (T) bodyString.toString();
-		}
-
-		// Try to parse DTO as fallback
-		if (canUseGson) {
-			return parseDTOGson(bodyString, type);
 		}
 		
 		// If we can't convert, we must return null.
 		return (T) null;
-	}
-
-	@SuppressWarnings("unchecked")
-	private static <T> T parseDTOGson(String bodyString, T type) {
-		Class<?> c = (Class<?>) type;
-		
-		try {
-			return (T) gson_fromJson.invoke(gson, bodyString, c);
-		} catch (Exception e) {
-			return null;
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private static <T> T convertToObjectGson(String bodyString, T type) {
-		Class<?> c = (Class<?>) type;
-
-		try {
-			Class<?> JsonObject = Class.forName("com.google.gson.JsonObject");
-			Class<?> JsonArray = Class.forName("com.google.gson.JsonArray");
-			Class<?> TypeToken = Class.forName("com.google.gson.reflect.TypeToken");
-			
-			Method getType = TypeToken.getMethod("getType");
-			Object t = TypeToken.newInstance();
-			Type empMapType = (Type) getType.invoke(t);
-			
-			// Convert to gson tree
-			if (JsonObject.isAssignableFrom(c)) {
-				Object obj = gson_fromJson.invoke(gson, bodyString, empMapType);
-				Object jsonTree = gson_toJsonTree.invoke(gson,  obj);
-				Method m = jsonTree.getClass().getMethod("getAsJsonArray");
-				return (T) m.invoke(jsonTree);
-			}
-	
-			// json array
-			if (JsonArray.isAssignableFrom(c)) {
-				Object obj = gson_fromJson.invoke(gson, bodyString, empMapType);
-				Object jsonTree = gson_toJsonTree.invoke(gson,  obj);
-				Method m = jsonTree.getClass().getMethod("getAsJsonArray");
-				return (T) m.invoke(jsonTree);
-			}
-	
-			// Convert to map
-			if (Map.class.isAssignableFrom(c)) {
-				return (T) gson_fromJson.invoke(gson, bodyString, empMapType);
-			}
-	
-			// Convert to list
-			if (List.class.isAssignableFrom(c)) {
-				return (T) gson_fromJson.invoke(gson, bodyString, empMapType);
-			}
-		} catch(Exception e) {
-			//
-		}
-		
-		return null;
 	}
 
 	/**
@@ -253,11 +176,12 @@ public class RestUtil {
 		
 		// Grab input stream
 		InputStream inputStream = connection.getInputStream();
-		if ( connection.getContentEncoding() != null && connection.getContentEncoding().contains("gzip") )
+		if ( connection.getContentEncoding() != null && connection.getContentEncoding().contains("gzip") ) {
 			inputStream = new GZIPInputStream(inputStream);
-		else if ( connection.getContentEncoding() != null && connection.getContentEncoding().contains("br") )
+		} else if ( connection.getContentEncoding() != null && connection.getContentEncoding().contains("br") ) {
 			throw new RuntimeException("Cannot decode payload. Brotli decoding is not natively supported by Java. Please use a supported Accept-Encoding header parameter.");
-		
+		}
+			
 		// Read body
 		String body = StringUtil.utf8(RestUtil.readAll(inputStream));
 
@@ -392,5 +316,12 @@ public class RestUtil {
 		// Write data
 		b.write(finalBody);
 		b.flush();
+	}
+	
+	public static String escape(String string) {
+		if ( string == null )
+			return null;
+		
+		return string.replace("'", "\'").replace("\"", "\\\"").replace("`", "\\`");
 	}
 }

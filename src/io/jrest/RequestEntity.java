@@ -17,7 +17,7 @@ import javax.net.ssl.SSLSocketFactory;
 import com.sun.net.ssl.HostnameVerifier;
 import com.sun.net.ssl.HttpsURLConnection;
 
-@SuppressWarnings("deprecation")
+@SuppressWarnings({ "deprecation", "restriction" })
 public class RequestEntity<T> extends HttpEntity<T> {
 
 	private HttpMethod method;
@@ -168,10 +168,11 @@ public class RequestEntity<T> extends HttpEntity<T> {
             
             // Get usable body
         	String body = null;
-        	if ( getBody() != null && !bodyInUrl )
+        	if ( getBody() != null && !bodyInUrl ) {
         		body = RestUtil.convertToString(getBody());
-        	else
+        	} else {
         		body = new String();
+        	}
         	
         	if ( bodyInUrl )
         		body = urlParameters;
