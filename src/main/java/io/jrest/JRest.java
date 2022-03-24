@@ -45,6 +45,9 @@ public class JRest {
 	/** Port the server is running on **/
 	private int port;
 	
+	/** Whether the JREST server will keep the application alive if no other NON-DAEMON threads are running **/
+	private boolean keepApplicationAlive;
+	
 	/** Client use of cookies **/
 	protected static CookieManager cookieManager;
 	
@@ -66,6 +69,7 @@ public class JRest {
 	/** Use {@link JRest#create()} to create a new JRest instance **/
 	private JRest() {
 		this.port = 80;
+		this.keepApplicationAlive = true;
 		this.logger = new Logger();
 		this.endpointMap = new HashMap<>();
 		this.responseHandlerMap = new HashMap<>();
@@ -104,7 +108,7 @@ public class JRest {
 		
 		// Server initializing
 		if ( server != null ) {
-			this.getLogger().error("Server is already started on port: " + port);
+			this.getLogger().error("Server is already started on port: " + server.getLocalPort());
 			return this;
 		}
 		
@@ -120,7 +124,9 @@ public class JRest {
 		initializing = true;
 		
 		// Start new server
-		new JRestServer().start();
+		Thread t = new JRestServer();
+		t.setDaemon(!getKeepApplicationAlive());
+		t.start();
 
 		// Wait for server to turn on
 		while (!error && initializing) {
@@ -148,7 +154,7 @@ public class JRest {
 		
 		public void run() {
 			try {
-				server = new ServerSocket(port);
+				server = new ServerSocket(getPort());
 				server.setSoTimeout(0);
 				
 				long elaspedTime = System.currentTimeMillis()-startTime;
@@ -456,6 +462,26 @@ public class JRest {
 		}
 		
 		this.port = port;
+		return this;
+	}
+	
+	/**
+	 * Get whether the application will stay alive if no other non-daemon threads are running.
+	 */
+	public boolean getKeepApplicationAlive() {
+		return this.keepApplicationAlive;
+	}
+	
+	/**
+	 * Set whether the application will stay alive if no other non-daemon threads are running.
+	 */
+	public JRest setKeepApplicationAlive(boolean keepApplicationAlive) {
+		if ( started || server != null ) {
+			this.getLogger().error("KeepApplicationAlive cannot be specified on a server that is starting or has been started.");
+			return this;
+		}
+		
+		this.keepApplicationAlive = keepApplicationAlive;
 		return this;
 	}
 	
