@@ -160,7 +160,11 @@ public class JRest {
 				long elaspedTime = System.currentTimeMillis()-startTime;
 				jrestInstance.getLogger().trace("JREST Server started: " + Inet4Address.getLocalHost().getHostAddress() + ":" + server.getLocalPort() + " " + elaspedTime + " ms");
 				
-				ExecutorService service = Executors.newCachedThreadPool();
+				ExecutorService service = Executors.newCachedThreadPool((runnable) -> {
+	                Thread t = Executors.defaultThreadFactory().newThread(runnable);
+	                t.setDaemon(true);
+	                return t;
+		        });
 				initializing = false;
 				
 				while (started) {
