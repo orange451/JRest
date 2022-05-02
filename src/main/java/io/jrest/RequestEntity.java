@@ -12,11 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.net.ssl.SSLSocketFactory;
-
-import com.sun.net.ssl.HostnameVerifier;
-import com.sun.net.ssl.HttpsURLConnection;
-
 @SuppressWarnings({ "deprecation", "restriction" })
 public class RequestEntity<T> extends HttpEntity<T> {
 
@@ -128,15 +123,19 @@ public class RequestEntity<T> extends HttpEntity<T> {
 			con.setRequestMethod(this.getMethod().toString());
 			
 			// Deprecated HttpsURLConnection stuff
-			if ( con instanceof HttpsURLConnection ) {
-				HttpsURLConnection httpsCon = (HttpsURLConnection)con;
-				httpsCon.setHostnameVerifier(new HostnameVerifier() {
-					@Override
-					public boolean verify(String urlHostname, String certHostname) {
-						return HttpsURLConnection.getDefaultHostnameVerifier().verify(urlHostname, certHostname);
-					}
-		        });
-				httpsCon.setSSLSocketFactory((SSLSocketFactory) SSLSocketFactory.getDefault());
+			try {
+				if ( con instanceof com.sun.net.ssl.HttpsURLConnection ) {
+					com.sun.net.ssl.HttpsURLConnection httpsCon = (com.sun.net.ssl.HttpsURLConnection)con;
+					httpsCon.setHostnameVerifier(new com.sun.net.ssl.HostnameVerifier() {
+						@Override
+						public boolean verify(String urlHostname, String certHostname) {
+							return com.sun.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier().verify(urlHostname, certHostname);
+						}
+			        });
+					httpsCon.setSSLSocketFactory((javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault());
+				}
+			} catch(NoClassDefFoundError e) {
+				// Do nothing. This is for Java8
 			}
 
 			// Hidden headers
