@@ -123,7 +123,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 			con.setRequestMethod(this.getMethod().toString());
 			
 			// Deprecated HttpsURLConnection stuff
-			try {
+			/*try {
 				if ( con instanceof com.sun.net.ssl.HttpsURLConnection ) {
 					com.sun.net.ssl.HttpsURLConnection httpsCon = (com.sun.net.ssl.HttpsURLConnection)con;
 					httpsCon.setHostnameVerifier(new com.sun.net.ssl.HostnameVerifier() {
@@ -136,7 +136,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 				}
 			} catch(NoClassDefFoundError e) {
 				// Do nothing. This is for Java8
-			}
+			}*/
 
 			// Hidden headers
 			if ( this.getHeaders().get(HttpHeaders.HOST) == null ) {
